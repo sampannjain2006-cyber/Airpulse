@@ -1,0 +1,106 @@
+{
+  "primary_model": "weighted_ensemble",
+  "primary_model_name": "Weighted Ensemble",
+  "candidate_models": [
+    "xgboost",
+    "random_forest",
+    "hist_gradient_boosting",
+    "weighted_ensemble"
+  ],
+  "ensemble_weights": {
+    "xgboost": 0.328,
+    "random_forest": 0.333,
+    "hist_gradient_boosting": 0.34
+  },
+  "selection_rationale": "Weighted Ensemble achieved lowest RMSE (26.36 \u00b5g/m\u00b3) and highest R\u00b2 (0.7398) across unseen historical test observations.",
+  "target": "PM2.5",
+  "unit": "\u00b5g/m\u00b3",
+  "generated_at": "2026-10-08T20:07:22.113633+00:00",
+  "total_stations": 40,
+  "stations_with_forecast": 33,
+  "stations_insufficient_data": 7,
+  "models_evaluation": {
+    "xgboost": {
+      "mae": 17.03,
+      "rmse": 27.49,
+      "r2": 0.717,
+      "train_samples": 4965,
+      "test_samples": 877,
+      "status": "validated"
+    },
+    "random_forest": {
+      "mae": 16.77,
+      "rmse": 26.39,
+      "r2": 0.7393,
+      "train_samples": 4965,
+      "test_samples": 877,
+      "status": "validated"
+    },
+    "hist_gradient_boosting": {
+      "mae": 16.43,
+      "rmse": 26.89,
+      "r2": 0.7292,
+      "train_samples": 4965,
+      "test_samples": 877,
+      "status": "validated"
+    },
+    "weighted_ensemble": {
+      "mae": 16.5,
+      "rmse": 26.36,
+      "r2": 0.7398,
+      "weights": {
+        "xgboost": 0.328,
+        "random_forest": 0.333,
+        "hist_gradient_boosting": 0.34
+      },
+      "train_samples": 4965,
+      "test_samples": 877,
+      "status": "validated_best"
+    }
+  },
+  "eligible_station_ids": [
+    2,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    23,
+    24,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    40
+  ],
+  "insufficient_station_ids": [
+    1,
+    3,
+    4,
+    21,
+    22,
+    25,
+    39
+  ],
+  "forecast_horizon_days": 5
+}

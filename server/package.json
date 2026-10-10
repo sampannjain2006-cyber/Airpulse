@@ -1,0 +1,27 @@
+{
+  "name": "airpulse-server",
+  "version": "0.1.0",
+  "description": "AirPulse backend API server",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "sync": "node src/jobs/syncJob.js",
+    "sync:history": "node src/jobs/syncHistoryJob.js",
+    "ml:forecast": "../ml/venv/bin/python ../ml/app/training/train_forecast.py"
+  },
+  "keywords": [
+    "airpulse",
+    "environment",
+    "pollution",
+    "api"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "pg": "^8.23.0"
+  }
+}
