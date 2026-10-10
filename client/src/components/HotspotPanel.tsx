@@ -13,6 +13,7 @@ interface HotspotPanelProps {
   selectedModel: string;
   loading?: boolean;
   onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
+  onOpenRecommendations?: (params: any) => void;
 }
 
 export const HotspotPanel: React.FC<HotspotPanelProps> = ({
@@ -27,6 +28,7 @@ export const HotspotPanel: React.FC<HotspotPanelProps> = ({
   selectedModel,
   loading = false,
   onOpenPollutantInfo,
+  onOpenRecommendations,
 }) => {
   const isForecast = mode === 'forecast';
 
@@ -192,6 +194,25 @@ export const HotspotPanel: React.FC<HotspotPanelProps> = ({
                       <span className="hotspot-source-text">
                         Source: {h.source} · Centroid: ({h.center.latitude.toFixed(4)}°N, {h.center.longitude.toFixed(4)}°E)
                       </span>
+                      {onOpenRecommendations && (
+                        <button
+                          className="btn-hotspot-rec-action"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onOpenRecommendations({
+                              pollutant: 'pm25',
+                              value: h.avg_pm25,
+                              mode,
+                              selectedDate,
+                              selectedModel,
+                              dataType: isForecast ? 'predicted' : 'observed',
+                            });
+                          }}
+                          title="View verified precaution recommendations for this hotspot cluster"
+                        >
+                          🛡 Precautions →
+                        </button>
+                      )}
                       <button
                         className="btn-focus-hotspot"
                         onClick={(e) => {

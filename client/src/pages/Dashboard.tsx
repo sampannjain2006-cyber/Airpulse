@@ -4,10 +4,13 @@ import type { Observation, HistoryObservation } from '../types/observation';
 import { stationsApi } from '../api/stations';
 import { observationsApi } from '../api/observations';
 import { predictionsApi } from '../api/predictions';
-import { hotspotsApi } from '../api/hotspots';
 import type { PredictionSummaryResponse, ModelsComparisonResponse } from '../types/prediction';
+import { hotspotsApi } from '../api/hotspots';
 import type { Hotspot } from '../types/hotspot';
+import { alertsApi } from '../api/alerts';
+import type { EnvironmentalAlert, AlertSummaryResponse, UnifiedAlertsResponse } from '../types/alert';
 import type { ContextualMeasurement } from '../types/pollutant';
+import type { DashboardMode } from '../components/DateNavigator';
 
 import { Navbar, type AppView } from '../components/Navbar';
 import { OverviewView } from '../views/OverviewView';
@@ -20,6 +23,8 @@ import { OpenAQRegistryView } from '../views/OpenAQRegistryView';
 import { GeoLookupView } from '../views/GeoLookupView';
 
 import { PollutantInfoModal } from '../components/PollutantInfoModal';
+import { AlertPanel } from '../components/AlertPanel';
+import { RecommendationModal } from '../components/RecommendationModal';
 
 type LoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
@@ -63,10 +68,31 @@ export function Dashboard() {
   const [selectedHotspot, setSelectedHotspot] = useState<Hotspot | null>(null);
   const [hotspotsLoading, setHotspotsLoading] = useState<boolean>(false);
 
-  // Pollutant Info Modal state
+  // Pollutant Info Modal state (Feature 8)
   const [isPollutantModalOpen, setIsPollutantModalOpen] = useState<boolean>(false);
   const [selectedPollutantId, setSelectedPollutantId] = useState<string>('pm25');
   const [contextualMeasurement, setContextualMeasurement] = useState<ContextualMeasurement | null>(null);
+
+  // Environmental Alerts & Automated Monitoring (Feature 9)
+  const [isAlertPanelOpen, setIsAlertPanelOpen] = useState<boolean>(false);
+  const [observedAlerts, setObservedAlerts] = useState<EnvironmentalAlert[]>([]);
+  const [forecastAlerts, setForecastAlerts] = useState<EnvironmentalAlert[]>([]);
+  const [alertSummary, setAlertSummary] = useState<AlertSummaryResponse | null>(null);
+  const [alertThreshold, setAlertThreshold] = useState<string>('poor');
+  const [alertsLoading, setAlertsLoading] = useState<boolean>(false);
+
+  // Context-Aware Precaution Recommendations (Feature 10)
+  const [isRecModalOpen, setIsRecModalOpen] = useState<boolean>(false);
+  const [recContextOverride, setRecContextOverride] = useState<{
+    station?: Station | null;
+    pollutant?: string;
+    value?: number | null;
+    severityTier?: number | null;
+    mode?: DashboardMode;
+    selectedDate?: string;
+    selectedModel?: string;
+    dataType?: 'observed' | 'predicted' | 'modelled';
+  } | null>(null);
 
   const selectedDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
@@ -93,11 +119,25 @@ export function Dashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleOpenPollutantInfo = (pollutantId: string, context?: ContextualMeasurement) => {
+  const handleOpenPollutantInfo = useCallback((pollutantId: string, context?: ContextualMeasurement) => {
     setSelectedPollutantId(pollutantId || 'pm25');
     setContextualMeasurement(context || null);
     setIsPollutantModalOpen(true);
-  };
+  }, []);
+
+  const handleOpenRecommendations = useCallback((override?: {
+    station?: Station | null;
+    pollutant?: string;
+    value?: number | null;
+    severityTier?: number | null;
+    mode?: DashboardMode;
+    selectedDate?: string;
+    selectedModel?: string;
+    dataType?: 'observed' | 'predicted' | 'modelled';
+  }) => {
+    setRecContextOverride(override || null);
+    setIsRecModalOpen(true);
+  }, []);
 
   // 1. Load Station Network
   const loadStations = useCallback(async () => {
@@ -110,8 +150,9 @@ export function Dashboard() {
       if (res.stations && res.stations.length > 0 && !selectedStation) {
         setSelectedStation(res.stations[0]);
       }
-    } catch (err: any) {
-      setStationsError(err.response?.data?.error?.message || err.message || 'Failed to fetch stations');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch stations';
+      setStationsError(msg);
       setStationsState('error');
     }
   }, [selectedStation]);
@@ -124,8 +165,9 @@ export function Dashboard() {
       const res = await observationsApi.latest({ limit: 100 });
       setLatestObs(res.data || []);
       setDataState('loaded');
-    } catch (err: any) {
-      setDataError(err.response?.data?.error?.message || err.message || 'Failed to fetch observations');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to fetch observations';
+      setDataError(msg);
       setDataState('error');
     }
   }, []);
@@ -175,13 +217,58 @@ export function Dashboard() {
         setHotspotsLoading(false);
       })
       .catch((err) => {
-        console.warn('[Hotspots] Initial load failed:', err.message);
+        console.warn('[Hotspots] Initial load failed:', err instanceof Error ? err.message : err);
         setHotspots([]);
         setHotspotsLoading(false);
       });
   }, [selectedDate, selectedModel]);
 
+  // Load Environmental Alerts (Feature 9)
+  useEffect(() => {
+    let isCancelled = false;
+    setAlertsLoading(true);
+
+    Promise.all([
+      alertsApi.list({
+        type: 'all',
+        date: selectedDate,
+        model: selectedModel,
+        min_severity: alertThreshold,
+        is_historical: false,
+      }),
+      alertsApi.summary({
+        observed_date: selectedDate,
+        forecast_date: selectedDate,
+        model: selectedModel,
+        min_severity: alertThreshold,
+        is_historical: false,
+      }),
+    ])
+      .then(([listRes, summaryRes]) => {
+        if (isCancelled) return;
+        const unified = listRes as UnifiedAlertsResponse;
+        setObservedAlerts(unified.observed?.alerts || []);
+        setForecastAlerts(unified.forecast?.alerts || []);
+        setAlertSummary(summaryRes);
+        setAlertsLoading(false);
+      })
+      .catch((err) => {
+        if (isCancelled) return;
+        console.warn('[Alerts] Fetch failed:', err instanceof Error ? err.message : err);
+        setObservedAlerts([]);
+        setForecastAlerts([]);
+        setAlertsLoading(false);
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedDate, selectedModel, alertThreshold]);
+
   const activeObsCount = latestObs.filter((o) => o.pm25 !== null || o.aqi !== null).length;
+  const totalAlertsCount = observedAlerts.length + forecastAlerts.length;
+  const currentMode: DashboardMode =
+    currentView === 'forecast' ? 'forecast' : currentView === 'historical' ? 'historical' : 'live';
 
   return (
     <div className="nature-app-shell">
@@ -194,6 +281,10 @@ export function Dashboard() {
         lastUpdatedText="Live Ground Telemetry"
         onOpenLookup={() => navigateToView('coordinates')}
         onOpenRegistry={() => navigateToView('registry')}
+        onToggleAlerts={() => setIsAlertPanelOpen(!isAlertPanelOpen)}
+        alertCount={totalAlertsCount}
+        alertsLoading={alertsLoading}
+        onOpenRecommendations={() => handleOpenRecommendations()}
       />
 
       {/* Mutually Exclusive Main View Router */}
@@ -295,7 +386,7 @@ export function Dashboard() {
         )}
       </main>
 
-      {/* Global Modals */}
+      {/* Authoritative Pollutant Information & Standards Modal (Feature 8) */}
       <PollutantInfoModal
         isOpen={isPollutantModalOpen}
         onClose={() => {
@@ -304,6 +395,53 @@ export function Dashboard() {
         }}
         initialPollutantId={selectedPollutantId}
         contextualMeasurement={contextualMeasurement}
+      />
+
+      {/* Automated Environmental Alerts Drawer Panel (Feature 9) */}
+      <AlertPanel
+        isOpen={isAlertPanelOpen}
+        onToggle={() => setIsAlertPanelOpen(!isAlertPanelOpen)}
+        observedAlerts={observedAlerts}
+        forecastAlerts={forecastAlerts}
+        summary={alertSummary}
+        loading={alertsLoading}
+        selectedThreshold={alertThreshold}
+        onSelectThreshold={setAlertThreshold}
+        onSelectStation={(id) => {
+          const s = stations.find((st) => st.id === id);
+          if (s) {
+            setSelectedStation(s);
+            navigateToView('live');
+          }
+        }}
+        onOpenPollutantInfo={handleOpenPollutantInfo}
+        mode={currentMode}
+        selectedDate={selectedDate}
+        selectedModel={selectedModel}
+      />
+
+      {/* Context-Aware Precaution Recommendations Modal (Feature 10) */}
+      <RecommendationModal
+        isOpen={isRecModalOpen}
+        onClose={() => {
+          setIsRecModalOpen(false);
+          setRecContextOverride(null);
+        }}
+        station={recContextOverride ? recContextOverride.station : selectedStation}
+        pollutant={recContextOverride?.pollutant || 'pm25'}
+        value={
+          recContextOverride?.value !== undefined
+            ? recContextOverride.value
+            : selectedStation
+            ? latestObs.find((o) => o.station_id === selectedStation.id)?.pm25
+            : undefined
+        }
+        severityTier={recContextOverride?.severityTier}
+        mode={recContextOverride?.mode || currentMode}
+        selectedDate={recContextOverride?.selectedDate || selectedDate}
+        selectedModel={recContextOverride?.selectedModel || selectedModel}
+        dataType={recContextOverride?.dataType || (currentMode === 'forecast' ? 'predicted' : 'observed')}
+        onOpenPollutantInfo={(id) => handleOpenPollutantInfo(id)}
       />
     </div>
   );

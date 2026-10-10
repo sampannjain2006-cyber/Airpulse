@@ -20,6 +20,10 @@ interface NavbarProps {
   lastUpdatedText?: string;
   onOpenLookup?: () => void;
   onOpenRegistry?: () => void;
+  onToggleAlerts?: () => void;
+  alertCount?: number;
+  alertsLoading?: boolean;
+  onOpenRecommendations?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -28,6 +32,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   stationCount,
   activeReadingCount,
   lastUpdatedText,
+  onToggleAlerts,
+  alertCount,
+  alertsLoading,
+  onOpenRecommendations,
 }) => {
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -157,6 +165,33 @@ export const Navbar: React.FC<NavbarProps> = ({
             </span>
           </div>
 
+          {/* Automated Environmental Alerts Badge / Toggle */}
+          {onToggleAlerts && (
+            <button
+              className="nature-pill alert-btn-pill"
+              onClick={onToggleAlerts}
+              title="Automated Environmental Alerts & Threshold Monitoring (CPCB NAQI Standards)"
+              style={{ cursor: 'pointer' }}
+            >
+              <span className={`status-dot ${(alertCount || 0) > 0 ? 'offline' : 'online'}`} />
+              <span className="pill-text">
+                {alertsLoading ? 'Scanning…' : `${alertCount || 0} Alerts`}
+              </span>
+            </button>
+          )}
+
+          {/* Context-Aware Precaution Recommendations Button */}
+          {onOpenRecommendations && (
+            <button
+              className="nature-pill rec-btn-pill"
+              onClick={onOpenRecommendations}
+              title="Context-Aware Environmental Precaution Recommendations (WHO & CPCB Public Health Guidance)"
+              style={{ cursor: 'pointer' }}
+            >
+              <span className="pill-text">🛡 Precautions</span>
+            </button>
+          )}
+
           {/* Tools Menu (Geo Lookup & OpenAQ) */}
           <div className="nature-tools-menu-wrap">
             <button
@@ -281,6 +316,32 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span className="nav-item-icon">🌐</span>
                 <span>OpenAQ Network Registry</span>
               </button>
+
+              {onToggleAlerts && (
+                <button
+                  className="nature-mobile-nav-link secondary"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onToggleAlerts();
+                  }}
+                >
+                  <span className="nav-item-icon">🚨</span>
+                  <span>Environmental Alerts ({alertCount || 0})</span>
+                </button>
+              )}
+
+              {onOpenRecommendations && (
+                <button
+                  className="nature-mobile-nav-link secondary"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenRecommendations();
+                  }}
+                >
+                  <span className="nav-item-icon">🛡</span>
+                  <span>Health Precautions &amp; Actions</span>
+                </button>
+              )}
             </div>
           </nav>
         </div>
