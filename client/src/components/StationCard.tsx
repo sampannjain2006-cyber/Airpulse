@@ -1,219 +1,221 @@
+import React from 'react';
 import type { Observation } from '../types/observation';
-import { AqiBadge } from './AqiBadge';
+import type { Station } from '../types/station';
 import { formatValue, formatRelativeTime, isStale } from '../utils/aqiUtils';
 import { getSeverity } from '../utils/severityEngine';
+import type { ContextualMeasurement } from '../types/pollutant';
 
-interface Props {
-  observation: Observation | (any & { has_data?: boolean; data_type?: string });
+export interface StationCardObservation extends Partial<Observation> {
+  data_type?: 'observed' | 'predicted';
+  has_data?: boolean;
+  model_name?: string;
+}
+
+export interface StationCardProps {
+  observation?: Observation | StationCardObservation;
+  station?: Station;
   isSelected?: boolean;
   onClick?: () => void;
   mode?: 'live' | 'historical' | 'forecast';
   selectedDate?: string;
-  onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
+  onOpenPollutantInfo?: (pollutantId: string, context?: ContextualMeasurement) => void;
 }
 
-export function StationCard({ observation: obs, isSelected, onClick, mode = 'live', selectedDate, onOpenPollutantInfo }: Props) {
-  const isForecast = mode === 'forecast' || obs.data_type === 'predicted';
-  const hasData = obs.has_data !== false && (obs.pm25 !== null || obs.aqi !== null);
-  const stale = !isForecast && isStale(obs.recorded_at);
+export const StationCard: React.FC<StationCardProps> = ({
+  observation: obs,
+  station,
+  isSelected = false,
+  onClick,
+  mode = 'live',
+  selectedDate,
+  onOpenPollutantInfo,
+}) => {
+  const extraObs = obs as StationCardObservation | undefined;
+  const isForecast = mode === 'forecast' || extraObs?.data_type === 'predicted';
+  const hasData = obs && extraObs?.has_data !== false && (obs.pm25 !== null || obs.aqi !== null);
+  const stale = !isForecast && obs?.recorded_at ? isStale(obs.recorded_at) : false;
 
-  const pm25Val = obs.pm25 != null ? Number(obs.pm25) : null;
-  const aqiVal = obs.aqi != null ? Number(obs.aqi) : null;
+  const stationName = obs?.station_name || station?.name || 'Monitoring Station';
+  const city = obs?.city || station?.city || 'India';
+  const state = obs?.state || station?.state || '';
+  const stationCode = obs?.station_code || station?.station_code;
+  const source = obs?.source || station?.source_type || 'OpenAQ';
+
+  const pm25Val = obs?.pm25 != null ? Number(obs.pm25) : null;
+  const aqiVal = obs?.aqi != null ? Number(obs.aqi) : null;
+
+  // Derive CPCB severity level from real data
   const severity = hasData
-    ? (pm25Val !== null
-        ? getSeverity('pm25', pm25Val, isForecast, obs.model_name)
-        : (aqiVal !== null ? getSeverity('aqi', aqiVal, false) : null))
+    ? pm25Val !== null
+      ? getSeverity('pm25', pm25Val, isForecast, extraObs?.model_name)
+      : aqiVal !== null
+      ? getSeverity('aqi', aqiVal, false)
+      : null
     : null;
 
+  // Pollutants present in real observation
+  const availablePollutants: Array<{
+    id: string;
+    label: string;
+    val: number | null | undefined;
+    unit: string;
+  }> = [];
+
+  if (obs) {
+    if (obs.pm25 != null) availablePollutants.push({ id: 'pm25', label: 'PM2.5', val: obs.pm25, unit: 'µg/m³' });
+    if (obs.pm10 != null) availablePollutants.push({ id: 'pm10', label: 'PM10', val: obs.pm10, unit: 'µg/m³' });
+    if (obs.no2 != null) availablePollutants.push({ id: 'no2', label: 'NO₂', val: obs.no2, unit: 'µg/m³' });
+    if (obs.so2 != null) availablePollutants.push({ id: 'so2', label: 'SO₂', val: obs.so2, unit: 'µg/m³' });
+    if (obs.o3 != null) availablePollutants.push({ id: 'o3', label: 'O₃', val: obs.o3, unit: 'µg/m³' });
+    if (obs.co != null) availablePollutants.push({ id: 'co', label: 'CO', val: obs.co, unit: 'mg/m³' });
+  }
+
   return (
-    <div
-      className={`station-card${isSelected ? ' selected' : ''}${!hasData ? ' station-no-data' : ''}`}
+    <article
+      className={`nature-station-card ${isSelected ? 'selected' : ''} ${!hasData ? 'no-readings' : ''}`}
       onClick={onClick}
-      style={{ cursor: onClick ? 'pointer' : 'default', opacity: hasData ? 1 : 0.65 }}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.();
+        }
+      }}
+      aria-pressed={isSelected}
+      aria-label={`Station ${stationName}, ${city}, ${state}`}
     >
-      <div className="station-card-header">
-        <div>
-          <div className="station-card-name">{obs.station_name}</div>
-          <div className="station-card-location">{obs.city}, {obs.state}</div>
+      {/* Top Meta Bar */}
+      <div className="card-top-bar">
+        <div className="station-identity">
+          <div className="station-code-chip">{stationCode || 'STN'}</div>
+          <div className="station-source-pill">{source.toUpperCase()}</div>
         </div>
-        {hasData ? (
-          isForecast ? (
-            <div className="card-badge-group">
-              <span className="forecast-badge-pill">
-                {pm25Val != null ? `PM2.5: ${Math.round(pm25Val)}` : 'FORECAST'}
-              </span>
-              {severity && severity.status === 'valid' && (
-                <span
-                  className="severity-card-chip"
-                  style={{
-                    backgroundColor: severity.bg_color,
-                    color: severity.color,
-                    border: `1px solid ${severity.color}55`,
-                  }}
-                >
-                  {severity.category?.toUpperCase()}
-                </span>
-              )}
-            </div>
-          ) : (
-            <div className="card-badge-group">
-              {aqiVal !== null ? (
-                <AqiBadge aqi={aqiVal} size="sm" />
-              ) : severity && severity.status === 'valid' ? (
-                <span
-                  className="severity-card-chip"
-                  style={{
-                    backgroundColor: severity.bg_color,
-                    color: severity.color,
-                    border: `1px solid ${severity.color}55`,
-                  }}
-                >
-                  {Math.round(pm25Val!)} µg/m³ · {severity.category?.toUpperCase()}
-                </span>
-              ) : (
-                <span className="badge-no-data">DATA UNAVAILABLE</span>
-              )}
-            </div>
-          )
+
+        {/* Severity / Status Chip */}
+        {hasData && severity && severity.status === 'valid' ? (
+          <div
+            className="card-severity-tag"
+            style={{
+              backgroundColor: severity.bg_color,
+              color: severity.color,
+              borderColor: `${severity.color}66`,
+            }}
+          >
+            <span className="severity-pulse-dot" style={{ backgroundColor: severity.color }} />
+            <span className="severity-text">{severity.category?.toUpperCase()}</span>
+            <span className="severity-tier">T{severity.severity_level}</span>
+          </div>
         ) : (
-          <span className="badge-no-data">DATA UNAVAILABLE</span>
+          <div className="card-severity-tag inactive">
+            <span className="dot gray" />
+            <span className="severity-text">PENDING INGESTION</span>
+          </div>
         )}
       </div>
 
+      {/* Station Name & Location */}
+      <div className="station-heading-group">
+        <h3 className="station-name-title" title={stationName}>
+          {stationName}
+        </h3>
+        <p className="station-geo-sub">
+          📍 {city}{state ? `, ${state}` : ''}
+        </p>
+      </div>
+
+      {/* Primary Measurement Highlight */}
       {hasData ? (
-        <div className="station-card-pollutants">
-          <div
-            className={`pollutant-item ${onOpenPollutantInfo ? 'clickable-pollutant' : ''}`}
-            onClick={(e) => {
-              if (onOpenPollutantInfo) {
-                e.stopPropagation();
-                onOpenPollutantInfo('pm25', {
-                  metric: 'pm25',
-                  pollutantName: 'PM2.5',
-                  value: obs.pm25,
-                  unit: 'µg/m³',
-                  stationName: obs.station_name,
-                  dateOrTimestamp: obs.recorded_at || obs.prediction_date || selectedDate,
-                  source: isForecast ? `AIRPULSE ML (${obs.model_name || 'Ensemble'})` : (obs.source || 'OpenAQ'),
-                  dataType: isForecast ? 'predicted' : 'observed',
-                  severityCategory: severity?.category,
-                  severityColor: severity?.color,
-                });
-              }
-            }}
-            title="Click to view PM2.5 information & standards"
-          >
-            <span className="pollutant-label">{isForecast ? 'PM2.5 (Pred)' : 'PM2.5'}</span>
-            <span className="pollutant-value">{formatValue(obs.pm25, 'µg/m³')}</span>
-          </div>
-          <div
-            className={`pollutant-item ${!isForecast && onOpenPollutantInfo ? 'clickable-pollutant' : ''}`}
-            onClick={(e) => {
-              if (!isForecast && onOpenPollutantInfo) {
-                e.stopPropagation();
-                onOpenPollutantInfo('pm10', {
-                  metric: 'pm10',
-                  pollutantName: 'PM10',
-                  value: obs.pm10,
-                  unit: 'µg/m³',
-                  stationName: obs.station_name,
-                  dateOrTimestamp: obs.recorded_at || selectedDate,
-                  source: obs.source || 'OpenAQ',
-                  dataType: 'observed',
-                });
-              }
-            }}
-            title={!isForecast ? "Click to view PM10 information & standards" : undefined}
-          >
-            <span className="pollutant-label">{isForecast ? 'CI Range' : 'PM10'}</span>
-            <span className="pollutant-value">
-              {isForecast && obs.lower_bound != null && obs.upper_bound != null
-                ? `±${Math.round((obs.upper_bound - obs.lower_bound) / 2)}`
-                : formatValue(obs.pm10, 'µg/m³')}
+        <div className="primary-metric-highlight">
+          <div className="metric-badge-container">
+            <span className="primary-metric-label">
+              {isForecast ? '5-Day Predicted PM2.5' : aqiVal !== null ? 'CPCB NAQI Index' : 'Dominant: PM2.5'}
             </span>
+            <div className="primary-metric-value-row">
+              <span className="primary-val-num">
+                {aqiVal !== null ? Math.round(aqiVal) : pm25Val !== null ? Math.round(pm25Val) : '—'}
+              </span>
+              <span className="primary-val-unit">
+                {aqiVal !== null ? 'Index' : 'µg/m³'}
+              </span>
+            </div>
           </div>
-          <div
-            className={`pollutant-item ${!isForecast && onOpenPollutantInfo ? 'clickable-pollutant' : ''}`}
-            onClick={(e) => {
-              if (!isForecast && onOpenPollutantInfo) {
-                e.stopPropagation();
-                onOpenPollutantInfo('no2', {
-                  metric: 'no2',
-                  pollutantName: 'NO₂',
-                  value: obs.no2,
-                  unit: 'µg/m³',
-                  stationName: obs.station_name,
-                  dateOrTimestamp: obs.recorded_at || selectedDate,
-                  source: obs.source || 'OpenAQ',
-                  dataType: 'observed',
-                });
-              }
-            }}
-            title={!isForecast ? "Click to view NO₂ information & standards" : undefined}
-          >
-            <span className="pollutant-label">{isForecast ? 'Severity' : 'NO₂'}</span>
-            <span
-              className="pollutant-value"
-              style={isForecast && severity?.color ? { color: severity.color, fontWeight: 700 } : undefined}
-            >
-              {isForecast ? (severity?.category || '—') : formatValue(obs.no2, 'µg/m³')}
-            </span>
-          </div>
-          <div
-            className={`pollutant-item ${!isForecast && onOpenPollutantInfo ? 'clickable-pollutant' : ''}`}
-            onClick={(e) => {
-              if (!isForecast && onOpenPollutantInfo) {
-                e.stopPropagation();
-                onOpenPollutantInfo('o3', {
-                  metric: 'o3',
-                  pollutantName: 'O₃',
-                  value: obs.o3,
-                  unit: 'µg/m³',
-                  stationName: obs.station_name,
-                  dateOrTimestamp: obs.recorded_at || selectedDate,
-                  source: obs.source || 'OpenAQ',
-                  dataType: 'observed',
-                });
-              }
-            }}
-            title={!isForecast ? "Click to view O₃ information & standards" : undefined}
-          >
-            <span className="pollutant-label">{isForecast ? 'Model' : 'O₃'}</span>
-            <span className="pollutant-value">{isForecast ? (obs.model_name || 'Ensemble') : formatValue(obs.o3, 'µg/m³')}</span>
+          <div className="primary-metric-implication">
+            {severity?.health_implication || (aqiVal !== null ? 'CPCB Ambient Standard' : 'Particulate matter')}
           </div>
         </div>
       ) : (
-        <div className="station-card-unavailable">
-          <span>Data unavailable for selected date {selectedDate ? `(${selectedDate})` : ''}</span>
+        <div className="no-data-card-banner">
+          <span className="banner-icon">ℹ️</span>
+          <div className="banner-text">
+            <strong>No current ground readings</strong>
+            <span>Telemetry pending from OpenAQ sensor</span>
+          </div>
         </div>
       )}
 
-      <div className="station-card-footer">
-        {isForecast ? (
-          <>
-            <span className="source-badge forecast-src">
-              {obs.model_name === 'weighted_ensemble'
-                ? 'Weighted Ensemble'
-                : obs.model_name === 'hist_gradient_boosting'
-                ? 'HistGradientBoosting'
-                : obs.model_name === 'random_forest'
-                ? 'Random Forest'
-                : obs.model_name || 'ML Forecast'}
-            </span>
-            <span className="freshness-badge">Target: {obs.prediction_date || selectedDate}</span>
-          </>
-        ) : (
-          <>
-            <span className={`freshness-badge${stale ? ' stale' : ''}`}>
-              {hasData
-                ? `${stale ? '⚠ Stale · ' : ''}Recorded: ${formatRelativeTime(obs.recorded_at)}`
-                : 'No ground observations'}
-            </span>
-            <span className="source-badge">{obs.source || 'OpenAQ'}</span>
-          </>
-        )}
+      {/* Available Pollutants Grid (Only measured parameters) */}
+      {hasData && availablePollutants.length > 0 && (
+        <div className="card-pollutants-row">
+          {availablePollutants.slice(0, 4).map((p) => (
+            <div
+              key={p.id}
+              className={`pollutant-mini-pill ${onOpenPollutantInfo ? 'interactive' : ''}`}
+              onClick={(e) => {
+                if (onOpenPollutantInfo) {
+                  e.stopPropagation();
+                  onOpenPollutantInfo(p.id, {
+                    metric: p.id,
+                    pollutantName: p.label,
+                    value: p.val,
+                    unit: p.unit,
+                    stationName,
+                    dateOrTimestamp: obs?.recorded_at || selectedDate,
+                    source,
+                    dataType: isForecast ? 'predicted' : 'observed',
+                  });
+                }
+              }}
+              title={onOpenPollutantInfo ? `Click to inspect ${p.label} info` : undefined}
+            >
+              <span className="pill-name">{p.label}</span>
+              <span className="pill-val">{formatValue(p.val, p.unit)}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Card Footer: Timestamp & Freshness */}
+      <div className="card-footer-meta">
+        <span className={`freshness-indicator ${stale ? 'stale' : hasData ? 'fresh' : 'idle'}`}>
+          {hasData
+            ? stale
+              ? `⚠ Stale · ${formatRelativeTime(obs?.recorded_at)}`
+              : `● Live · ${formatRelativeTime(obs?.recorded_at)}`
+            : 'Station Registered'}
+        </span>
+        <span className="select-action-hint">
+          {isSelected ? '✓ Selected' : 'Click to inspect →'}
+        </span>
+      </div>
+    </article>
+  );
+};
+
+export const StationCardSkeleton: React.FC = () => {
+  return (
+    <div className="nature-station-card skeleton" aria-hidden="true">
+      <div className="card-top-bar">
+        <div className="skeleton-box chip" />
+        <div className="skeleton-box badge" />
+      </div>
+      <div className="skeleton-box title" />
+      <div className="skeleton-box subtitle" />
+      <div className="skeleton-box metric-block" />
+      <div className="card-footer-meta">
+        <div className="skeleton-box footer-left" />
+        <div className="skeleton-box footer-right" />
       </div>
     </div>
   );
-}
-
+};
