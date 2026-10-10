@@ -7,3 +7,4 @@ app.listen(PORT, () => {
   console.log(`[AirPulse API] Server running on port ${PORT}`);
   console.log(`[AirPulse API] Environment: ${env.NODE_ENV}`);
 });
+

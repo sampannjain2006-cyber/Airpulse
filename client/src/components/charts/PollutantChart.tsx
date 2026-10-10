@@ -10,10 +10,10 @@ import {
 } from 'recharts';
 import type { HistoryObservation } from '../../types/observation';
 
-const CHART_COLORS = {
-  pm25: '#38bdf8',
-  pm10: '#a78bfa',
-  aqi:  '#f59e0b',
+const NATURE_CHART_COLORS = {
+  pm25: '#2d6a4f', // Forest Green
+  pm10: '#0284c7', // Sky Blue
+  aqi:  '#d97706', // Warm Amber
 };
 
 function formatXTick(iso: string): string {
@@ -30,9 +30,10 @@ interface Props {
 export function PollutantChart({ data, series = ['pm25', 'pm10'], height = 280 }: Props) {
   if (!data || data.length === 0) {
     return (
-      <div className="chart-empty">
-        <p>No historical data available for this station.</p>
-        <p className="chart-empty-hint">Data will appear here once observations are ingested.</p>
+      <div className="nature-chart-empty">
+        <span className="empty-chart-icon">🌱</span>
+        <p className="empty-chart-text">No historical telemetry recorded for this station.</p>
+        <span className="empty-chart-hint">Observations will populate once ground sensor logs are synchronized.</span>
       </div>
     );
   }
@@ -46,43 +47,70 @@ export function PollutantChart({ data, series = ['pm25', 'pm10'], height = 280 }
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <LineChart data={chartData} margin={{ top: 4, right: 16, left: 0, bottom: 4 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
+      <LineChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 8 }}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8df" vertical={false} />
         <XAxis
           dataKey="t"
           tickFormatter={formatXTick}
-          tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }}
+          tick={{ fill: '#4a5d4e', fontSize: 11, fontFamily: 'var(--font-sans)' }}
           tickLine={false}
-          axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+          axisLine={{ stroke: '#cbd5c5' }}
           minTickGap={60}
         />
         <YAxis
-          tick={{ fill: '#64748b', fontSize: 11, fontFamily: 'var(--font-mono)' }}
+          tick={{ fill: '#4a5d4e', fontSize: 11, fontFamily: 'var(--font-sans)' }}
           tickLine={false}
-          axisLine={{ stroke: 'rgba(255,255,255,0.1)' }}
+          axisLine={{ stroke: '#cbd5c5' }}
           unit=" µg/m³"
         />
         <Tooltip
           contentStyle={{
-            background: 'rgba(13, 18, 31, 0.95)',
-            backdropFilter: 'blur(12px)',
-            border: '1px solid rgba(255, 255, 255, 0.12)',
-            borderRadius: 8,
-            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)',
+            backgroundColor: '#ffffff',
+            border: '1px solid #d1dcce',
+            borderRadius: 10,
+            boxShadow: '0 6px 20px rgba(27, 67, 50, 0.12)',
+            color: '#19241b',
+            padding: '10px 14px',
           }}
-          labelStyle={{ color: '#94a3b8', fontSize: 11, fontFamily: 'var(--font-mono)' }}
+          labelStyle={{ color: '#2d6a4f', fontSize: 12, fontWeight: 600, marginBottom: 4 }}
           labelFormatter={(label: any) => new Date(label).toLocaleString('en-IN')}
-          itemStyle={{ fontSize: 12, fontFamily: 'var(--font-mono)', padding: '2px 0' }}
+          itemStyle={{ fontSize: 12, padding: '2px 0' }}
         />
-        <Legend wrapperStyle={{ fontSize: 12, color: '#94a3b8', paddingTop: 8 }} />
+        <Legend wrapperStyle={{ fontSize: 12, color: '#4a5d4e', paddingTop: 10 }} />
         {series.includes('pm25') && (
-          <Line type="monotone" dataKey="pm25" name="PM2.5" stroke={CHART_COLORS.pm25} dot={{ r: 3 }} strokeWidth={2} connectNulls />
+          <Line
+            type="monotone"
+            dataKey="pm25"
+            name="PM2.5 (µg/m³)"
+            stroke={NATURE_CHART_COLORS.pm25}
+            strokeWidth={2.5}
+            dot={{ r: 3, fill: NATURE_CHART_COLORS.pm25 }}
+            activeDot={{ r: 5 }}
+            connectNulls
+          />
         )}
         {series.includes('pm10') && (
-          <Line type="monotone" dataKey="pm10" name="PM10" stroke={CHART_COLORS.pm10} dot={{ r: 3 }} strokeWidth={2} connectNulls />
+          <Line
+            type="monotone"
+            dataKey="pm10"
+            name="PM10 (µg/m³)"
+            stroke={NATURE_CHART_COLORS.pm10}
+            strokeWidth={2}
+            dot={{ r: 2.5, fill: NATURE_CHART_COLORS.pm10 }}
+            connectNulls
+          />
         )}
         {series.includes('aqi') && (
-          <Line type="monotone" dataKey="aqi" name="AQI" stroke={CHART_COLORS.aqi} dot={{ r: 3 }} strokeWidth={2} connectNulls />
+          <Line
+            type="monotone"
+            dataKey="aqi"
+            name="AQI (CPCB)"
+            stroke={NATURE_CHART_COLORS.aqi}
+            strokeWidth={2}
+            strokeDasharray="4 4"
+            dot={{ r: 2.5, fill: NATURE_CHART_COLORS.aqi }}
+            connectNulls
+          />
         )}
       </LineChart>
     </ResponsiveContainer>
