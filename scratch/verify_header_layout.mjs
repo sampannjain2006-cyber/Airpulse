@@ -46,6 +46,9 @@ test('Box 5: Hotspots button pill is present', tsx.includes('HOTSPOTS'));
 test('Box 6: Pollutant Guide button pill is present', tsx.includes('POLLUTANT GUIDE'));
 test('Box 7: Alerts button pill is present', tsx.includes('ALERTS'));
 test('Box 8: Precaution Recommendations button pill is present', tsx.includes('PRECAUTIONS'));
+test('Box 9: Industrial Waste Reuse button pill is present', tsx.includes('WASTE REUSE'));
+test('Box 10: Protection Store button pill is present', tsx.includes('PROTECTION STORE'));
+test('Box 11: Route Planner button pill is present', tsx.includes('ROUTE PLANNER'));
 
 // 4. CSS Layout Rules Verification
 test('CSS: .dashboard-header uses column flex layout', css.includes('.dashboard-header {') && css.includes('flex-direction: column;'));

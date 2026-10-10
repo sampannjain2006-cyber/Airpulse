@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import type { Station } from '../types/station';
 import type { Observation } from '../types/observation';
 import type { Hotspot } from '../types/hotspot';
+import type { AnalyzedRoute } from '../types/route';
 import { getAqiInfo } from '../utils/aqiUtils';
 import { getSeverity } from '../utils/severityEngine';
 
@@ -17,6 +18,12 @@ interface Props {
   hotspots?: Hotspot[];
   selectedHotspot?: Hotspot | null;
   onSelectHotspot?: (hotspot: Hotspot | null) => void;
+  // Route planning props (Feature 13)
+  routes?: AnalyzedRoute[];
+  selectedRouteIndex?: number;
+  onSelectRouteIndex?: (idx: number) => void;
+  routeOrigin?: { latitude: number; longitude: number; name: string } | null;
+  routeDestination?: { latitude: number; longitude: number; name: string } | null;
 }
 
 export function MapView({
@@ -29,11 +36,17 @@ export function MapView({
   hotspots = [],
   selectedHotspot = null,
   onSelectHotspot,
+  routes = [],
+  selectedRouteIndex = 0,
+  onSelectRouteIndex,
+  routeOrigin = null,
+  routeDestination = null,
 }: Props) {
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const markersRef = useRef<Map<number, L.Marker>>(new Map());
   const hotspotsLayerRef = useRef<L.LayerGroup | null>(null);
+  const routesLayerRef = useRef<L.LayerGroup | null>(null);
 
   const obsMap = new Map(latestObservations.map((o) => [o.station_id, o]));
 
@@ -334,6 +347,109 @@ export function MapView({
     const marker = markersRef.current.get(selectedStation.id);
     if (marker) marker.openPopup();
   }, [selectedStation]);
+
+  // 6. Render Pollution-Aware Route Layers (Feature 13)
+  useEffect(() => {
+    const map = mapRef.current;
+    const leaflet = L || (window as any).L;
+    if (!map || !leaflet) return;
+
+    if (!routesLayerRef.current) {
+      routesLayerRef.current = leaflet.layerGroup().addTo(map);
+    } else {
+      routesLayerRef.current.clearLayers();
+    }
+
+    if (!routes || routes.length === 0) return;
+
+    // Origin Marker (A)
+    if (routeOrigin && isFinite(routeOrigin.latitude) && isFinite(routeOrigin.longitude)) {
+      const pinA = leaflet.divIcon({
+        className: 'route-map-pin-container',
+        html: `<div style="
+          width: 30px; height: 30px; border-radius: 50%;
+          background: #10b981; border: 3px solid #ffffff;
+          box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+          display: flex; align-items: center; justify-content: center;
+          font-weight: 800; font-size: 13px; color: #ffffff;
+        ">A</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+      });
+      leaflet.marker([routeOrigin.latitude, routeOrigin.longitude], { icon: pinA })
+        .addTo(routesLayerRef.current!)
+        .bindPopup(`<b>Start (A):</b> ${routeOrigin.name}`);
+    }
+
+    // Destination Marker (B)
+    if (routeDestination && isFinite(routeDestination.latitude) && isFinite(routeDestination.longitude)) {
+      const pinB = leaflet.divIcon({
+        className: 'route-map-pin-container',
+        html: `<div style="
+          width: 30px; height: 30px; border-radius: 50%;
+          background: #ef4444; border: 3px solid #ffffff;
+          box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+          display: flex; align-items: center; justify-content: center;
+          font-weight: 800; font-size: 13px; color: #ffffff;
+        ">B</div>`,
+        iconSize: [30, 30],
+        iconAnchor: [15, 15],
+      });
+      leaflet.marker([routeDestination.latitude, routeDestination.longitude], { icon: pinB })
+        .addTo(routesLayerRef.current!)
+        .bindPopup(`<b>Destination (B):</b> ${routeDestination.name}`);
+    }
+
+    let selectedPolyline: any = null;
+
+    // Draw Route Polylines
+    routes.forEach((route, idx) => {
+      const isSelected = idx === selectedRouteIndex;
+      const coords = route.geometry?.coordinates || [];
+      const latLngs: [number, number][] = coords.map(([lon, lat]) => [lat, lon] as [number, number]);
+
+      if (latLngs.length === 0) return;
+
+      const strokeColor = isSelected
+        ? (route.pollution_analysis?.severity?.color || '#38bdf8')
+        : '#64748b';
+
+      const polyline = leaflet.polyline(latLngs, {
+        color: strokeColor,
+        weight: isSelected ? 6 : 4,
+        opacity: isSelected ? 0.95 : 0.6,
+        dashArray: isSelected ? undefined : '6, 8',
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(routesLayerRef.current!);
+
+      const popupContent = `
+        <div style="font-family: system-ui; min-width: 180px;">
+          <strong style="color: ${strokeColor}; font-size: 13px;">${route.name} (${route.tag})</strong><br/>
+          <div style="margin-top: 4px; font-size: 12px; color: #334155;">
+            Distance: <b>${route.distance_km} km</b> · Est. Time: <b>${route.duration_minutes} min</b> (${route.mode_label})<br/>
+            ${route.pollution_analysis?.corridor_avg_concentration !== null
+              ? `Corridor Exposure: <b>${route.pollution_analysis.corridor_avg_concentration} µg/m³</b> (${route.pollution_analysis.severity?.category || ''})`
+              : '<i>Corridor Exposure: Data Unavailable</i>'}
+          </div>
+        </div>
+      `;
+      polyline.bindPopup(popupContent);
+
+      polyline.on('click', () => {
+        if (onSelectRouteIndex) onSelectRouteIndex(idx);
+      });
+
+      if (isSelected) {
+        selectedPolyline = polyline;
+      }
+    });
+
+    // Zoom and pan to fit the route
+    if (selectedPolyline) {
+      map.fitBounds(selectedPolyline.getBounds(), { padding: [50, 50], animate: true });
+    }
+  }, [routes, selectedRouteIndex, onSelectRouteIndex, routeOrigin, routeDestination]);
 
   return (
     <div

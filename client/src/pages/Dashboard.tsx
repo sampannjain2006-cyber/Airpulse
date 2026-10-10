@@ -18,6 +18,10 @@ import { HotspotPanel } from '../components/HotspotPanel';
 import { PollutantInfoModal } from '../components/PollutantInfoModal';
 import { AlertPanel } from '../components/AlertPanel';
 import { RecommendationModal } from '../components/RecommendationModal';
+import { WasteReuseModal } from '../components/WasteReuseModal';
+import { ProtectionStoreModal } from '../components/ProtectionStoreModal';
+import { RoutePlanningDrawer } from '../components/RoutePlanningDrawer';
+import type { RoutePlanResponse } from '../types/route';
 import type { ContextualMeasurement } from '../types/pollutant';
 import { openaqApi } from '../api/openaq';
 import { hotspotsApi } from '../api/hotspots';
@@ -105,6 +109,41 @@ export function Dashboard() {
     setRecContextOverride(override || null);
     setIsRecModalOpen(true);
   };
+
+  // Industrial Waste Reuse & Pollution Prevention (Feature 11)
+  const [isWasteReuseOpen, setIsWasteReuseOpen] = useState<boolean>(false);
+
+  // Pollution Protection & Accessories Store (Feature 12)
+  const [isStoreOpen, setIsStoreOpen] = useState<boolean>(false);
+  const [storeContextOverride, setStoreContextOverride] = useState<{
+    station?: Station | null;
+    pollutant?: string;
+    value?: number | null;
+    severityTier?: number | null;
+    mode?: DashboardMode;
+    selectedDate?: string;
+    selectedModel?: string;
+    dataType?: 'observed' | 'predicted' | 'modelled';
+  } | null>(null);
+
+  const handleOpenStore = (override?: {
+    station?: Station | null;
+    pollutant?: string;
+    value?: number | null;
+    severityTier?: number | null;
+    mode?: DashboardMode;
+    selectedDate?: string;
+    selectedModel?: string;
+    dataType?: 'observed' | 'predicted' | 'modelled';
+  }) => {
+    setStoreContextOverride(override || null);
+    setIsStoreOpen(true);
+  };
+
+  // Pollution-Aware Route Planning states (Feature 13)
+  const [isRoutePlannerOpen, setIsRoutePlannerOpen] = useState<boolean>(false);
+  const [activeRoutePlan, setActiveRoutePlan] = useState<RoutePlanResponse | null>(null);
+  const [selectedRouteIdx, setSelectedRouteIdx] = useState<number>(0);
 
   // Date selection states (Feature 1)
   const [mode, setMode] = useState<DashboardMode>('live');
@@ -494,6 +533,38 @@ export function Dashboard() {
               <span className="telemetry-status-separator">/</span>
               <span className="telemetry-status-count">WHO + CPCB</span>
             </button>
+            <button
+              className="telemetry-status-pill waste-reuse-btn-pill"
+              onClick={() => setIsWasteReuseOpen(true)}
+              title="Industrial Waste Reuse & Pollution Prevention (CPCB & MoEFCC Circular Pathways)"
+            >
+              <span className="telemetry-status-dot amber" />
+              <span className="telemetry-status-text">WASTE REUSE</span>
+              <span className="telemetry-status-separator">/</span>
+              <span className="telemetry-status-count">CPCB + MoEFCC</span>
+            </button>
+            <button
+              className="telemetry-status-pill store-btn-pill"
+              onClick={() => handleOpenStore()}
+              title="Pollution Protection & Accessories Store (Certified N95/FFP2, Air Purifiers & Travel Gear)"
+            >
+              <span className="telemetry-status-dot teal" />
+              <span className="telemetry-status-text">PROTECTION STORE</span>
+              <span className="telemetry-status-separator">/</span>
+              <span className="telemetry-status-count">PPE + PURIFIERS</span>
+            </button>
+            <button
+              className="telemetry-status-pill route-btn-pill"
+              onClick={() => setIsRoutePlannerOpen(!isRoutePlannerOpen)}
+              title="Pollution-Aware Route Planning for Walking & Cycling (OSRM Multi-Route & PostGIS Corridor Analysis)"
+            >
+              <span className={`telemetry-status-dot green ${activeRoutePlan ? 'pulse' : ''}`} />
+              <span className="telemetry-status-text">ROUTE PLANNER</span>
+              <span className="telemetry-status-separator">/</span>
+              <span className="telemetry-status-count">
+                {activeRoutePlan ? `${activeRoutePlan.routes.length} ROUTES` : 'WALK & BIKE'}
+              </span>
+            </button>
           </div>
         </div>
       </header>
@@ -615,6 +686,11 @@ export function Dashboard() {
               hotspots={hotspots}
               selectedHotspot={selectedHotspot}
               onSelectHotspot={setSelectedHotspot}
+              routes={activeRoutePlan?.routes || []}
+              selectedRouteIndex={selectedRouteIdx}
+              onSelectRouteIndex={(idx) => setSelectedRouteIdx(idx)}
+              routeOrigin={activeRoutePlan?.origin || null}
+              routeDestination={activeRoutePlan?.destination || null}
             />
           </div>
 
@@ -652,25 +728,42 @@ export function Dashboard() {
 
               {selectedItem && selectedItem.has_data !== false ? (
                 <>
-                  <div className="station-rec-action-bar">
-                    <button
-                      className="btn-station-rec-action"
-                      onClick={() => {
-                        handleOpenRecommendations({
-                          station: selectedStation,
-                          pollutant: 'pm25',
-                          value: selectedItem?.pm25,
-                          mode,
-                          selectedDate,
-                          selectedModel,
-                          dataType: mode === 'forecast' ? 'predicted' : 'observed',
-                        });
-                      }}
-                      title="Open verified precaution recommendations based on this station's telemetry"
-                    >
-                      🛡 View Recommended Precautions →
-                    </button>
-                  </div>
+                    <div className="station-rec-action-bar">
+                      <button
+                        className="btn-station-rec-action"
+                        onClick={() => {
+                          handleOpenRecommendations({
+                            station: selectedStation,
+                            pollutant: 'pm25',
+                            value: selectedItem?.pm25,
+                            mode,
+                            selectedDate,
+                            selectedModel,
+                            dataType: mode === 'forecast' ? 'predicted' : 'observed',
+                          });
+                        }}
+                        title="Open verified precaution recommendations based on this station's telemetry"
+                      >
+                        🛡 View Recommended Precautions →
+                      </button>
+                      <button
+                        className="btn-station-store-action"
+                        onClick={() => {
+                          handleOpenStore({
+                            station: selectedStation,
+                            pollutant: 'pm25',
+                            value: selectedItem?.pm25,
+                            mode,
+                            selectedDate,
+                            selectedModel,
+                            dataType: mode === 'forecast' ? 'predicted' : 'observed',
+                          });
+                        }}
+                        title="Open destination-aware accessories store for this station"
+                      >
+                        🛍 Protection Gear &amp; Store →
+                      </button>
+                    </div>
 
                   <div className="pollutant-grid">
                     {[
@@ -824,6 +917,44 @@ export function Dashboard() {
         selectedModel={recContextOverride?.selectedModel || selectedModel}
         dataType={recContextOverride?.dataType || (mode === 'forecast' ? 'predicted' : 'observed')}
         onOpenPollutantInfo={handleOpenPollutantInfo}
+      />
+
+      {/* Industrial Waste Reuse & Pollution Prevention Modal (Feature 11) */}
+      <WasteReuseModal
+        isOpen={isWasteReuseOpen}
+        onClose={() => setIsWasteReuseOpen(false)}
+      />
+
+      {/* Pollution Protection & Accessories Store Modal (Feature 12) */}
+      <ProtectionStoreModal
+        isOpen={isStoreOpen}
+        onClose={() => {
+          setIsStoreOpen(false);
+          setStoreContextOverride(null);
+        }}
+        stations={stations}
+        initialStation={storeContextOverride ? storeContextOverride.station : selectedStation}
+        initialPollutant={storeContextOverride?.pollutant || 'pm25'}
+        initialValue={storeContextOverride?.value !== undefined ? storeContextOverride.value : selectedItem?.pm25}
+        initialSeverityTier={storeContextOverride?.severityTier}
+        mode={storeContextOverride?.mode || mode}
+        selectedDate={storeContextOverride?.selectedDate || selectedDate}
+        selectedModel={storeContextOverride?.selectedModel || selectedModel}
+        dataType={storeContextOverride?.dataType || (mode === 'forecast' ? 'predicted' : 'observed')}
+      />
+
+      {/* Pollution-Aware Route Planning Drawer (Feature 13) */}
+      <RoutePlanningDrawer
+        isOpen={isRoutePlannerOpen}
+        onClose={() => setIsRoutePlannerOpen(false)}
+        stations={stations}
+        activeRouteResponse={activeRoutePlan}
+        onRoutesCalculated={(res) => {
+          setActiveRoutePlan(res);
+          setSelectedRouteIdx(0);
+        }}
+        selectedRouteIndex={selectedRouteIdx}
+        onSelectRouteIndex={(idx) => setSelectedRouteIdx(idx)}
       />
     </div>
   );

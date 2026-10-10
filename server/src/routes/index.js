@@ -10,6 +10,9 @@ import { hotspotRouter } from './hotspots.js';
 import { pollutantRouter } from './pollutants.js';
 import { alertsRouter } from './alerts.js';
 import { recommendationRouter } from './recommendations.js';
+import { wasteReuseRouter } from './wasteReuse.js';
+import { storeRouter } from './store.js';
+import { routesRouter } from './routes.js';
 
 export const apiRouter = Router();
 
@@ -24,3 +27,6 @@ apiRouter.use('/hotspots', hotspotRouter);
 apiRouter.use('/pollutants', pollutantRouter);
 apiRouter.use('/alerts', alertsRouter);
 apiRouter.use('/recommendations', recommendationRouter);
+apiRouter.use('/waste-reuse', wasteReuseRouter);
+apiRouter.use('/store', storeRouter);
+apiRouter.use('/routes', routesRouter);
