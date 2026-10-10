@@ -13,6 +13,8 @@ import { recommendationRouter } from './recommendations.js';
 import { wasteReuseRouter } from './wasteReuse.js';
 import { storeRouter } from './store.js';
 import { routesRouter } from './routes.js';
+import { campusRouter } from './campus.js';
+import { googleRouter } from './google.js';
 
 export const apiRouter = Router();
 
@@ -30,3 +32,5 @@ apiRouter.use('/recommendations', recommendationRouter);
 apiRouter.use('/waste-reuse', wasteReuseRouter);
 apiRouter.use('/store', storeRouter);
 apiRouter.use('/routes', routesRouter);
+apiRouter.use('/campus', campusRouter);
+apiRouter.use('/google', googleRouter);

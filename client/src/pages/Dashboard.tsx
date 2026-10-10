@@ -21,6 +21,7 @@ import { HotspotsView } from '../views/HotspotsView';
 import { PollutantGuideView } from '../views/PollutantGuideView';
 import { OpenAQRegistryView } from '../views/OpenAQRegistryView';
 import { GeoLookupView } from '../views/GeoLookupView';
+import { CampusSupportView } from '../views/CampusSupportView';
 
 import { PollutantInfoModal } from '../components/PollutantInfoModal';
 import { AlertPanel } from '../components/AlertPanel';
@@ -29,6 +30,8 @@ import { WasteReuseModal } from '../components/WasteReuseModal';
 import { ProtectionStoreModal } from '../components/ProtectionStoreModal';
 import { RoutePlanningDrawer } from '../components/RoutePlanningDrawer';
 import type { RoutePlanResponse } from '../types/route';
+import { GoogleServicesModal } from '../components/GoogleServicesModal';
+import type { GoogleContextPayload } from '../types/google';
 
 type LoadState = 'idle' | 'loading' | 'loaded' | 'error';
 
@@ -38,6 +41,7 @@ const VALID_VIEWS: AppView[] = [
   'historical',
   'forecast',
   'hotspots',
+  'campus',
   'pollutants',
   'registry',
   'coordinates',
@@ -47,6 +51,7 @@ const getViewFromHash = (): AppView => {
   const hash = window.location.hash.replace('#', '').toLowerCase();
   if (hash === 'tools-registry' || hash === 'openaq') return 'registry';
   if (hash === 'tools-lookup' || hash === 'geo' || hash === 'lookup') return 'coordinates';
+  if (hash === 'campus' || hash === 'student-support' || hash === 'health') return 'campus';
   if (VALID_VIEWS.includes(hash as AppView)) {
     return hash as AppView;
   }
@@ -176,6 +181,17 @@ export function Dashboard() {
   }) => {
     setStoreContextOverride(override || null);
     setIsStoreOpen(true);
+  }, []);
+
+  // Google Services Integration (Feature 15)
+  const [isGoogleModalOpen, setIsGoogleModalOpen] = useState<boolean>(false);
+  const [googleModalTab, setGoogleModalTab] = useState<'maps' | 'calendar' | 'tasks' | 'account'>('maps');
+  const [googleModalContext, setGoogleModalContext] = useState<GoogleContextPayload | null>(null);
+
+  const handleOpenGoogleServices = useCallback((context?: GoogleContextPayload, tab: 'maps' | 'calendar' | 'tasks' | 'account' = 'maps') => {
+    setGoogleModalContext(context || null);
+    setGoogleModalTab(tab);
+    setIsGoogleModalOpen(true);
   }, []);
 
   // 1. Load Station Network
@@ -332,6 +348,7 @@ export function Dashboard() {
         onOpenStore={() => handleOpenStore()}
         onToggleRoutePlanner={() => setIsRoutePlannerOpen(!isRoutePlannerOpen)}
         activeRoutePlanCount={activeRoutePlan ? activeRoutePlan.routes.length : 0}
+        onOpenGoogleServices={() => handleOpenGoogleServices()}
       />
 
       {/* Row 3 Feature Action Bar / Quick Access Toolbar */}
@@ -373,6 +390,18 @@ export function Dashboard() {
             <span className="telemetry-status-count">
               {activeRoutePlan ? `${activeRoutePlan.routes.length} ROUTES` : 'WALK & BIKE'}
             </span>
+          </button>
+
+          <button
+            className="telemetry-status-pill google-services-btn-pill"
+            onClick={() => handleOpenGoogleServices()}
+            title="Google Services Integration (Google Maps Navigation, Calendar Event Drafts & Google Tasks)"
+            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(66, 133, 244, 0.3)', background: 'rgba(219, 234, 254, 0.6)', fontSize: '11px', fontWeight: 600, color: '#1d4ed8' }}
+          >
+            <span className="telemetry-status-dot blue" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4285f4', display: 'inline-block' }} />
+            <span className="telemetry-status-text">GOOGLE SERVICES</span>
+            <span className="telemetry-status-separator">/</span>
+            <span className="telemetry-status-count">MAPS + CALENDAR + TASKS</span>
           </button>
         </div>
       </div>
@@ -451,6 +480,10 @@ export function Dashboard() {
             selectedModel={selectedModel}
             onOpenPollutantInfo={handleOpenPollutantInfo}
           />
+        )}
+
+        {currentView === 'campus' && (
+          <CampusSupportView onOpenPollutantInfo={handleOpenPollutantInfo} />
         )}
 
         {currentView === 'pollutants' && (
@@ -577,6 +610,7 @@ export function Dashboard() {
         }}
         selectedRouteIndex={selectedRouteIdx}
         onSelectRouteIndex={(idx) => setSelectedRouteIdx(idx)}
+        onOpenGoogleServices={(ctx) => handleOpenGoogleServices(ctx, 'maps')}
       />
 
       {/* Hidden button references ensuring backwards test compatibility */}
@@ -588,6 +622,17 @@ export function Dashboard() {
       >
         Protection Gear &amp; Store
       </button>
+
+      {/* Google Services Integration Modal (Feature 15) */}
+      <GoogleServicesModal
+        isOpen={isGoogleModalOpen}
+        onClose={() => {
+          setIsGoogleModalOpen(false);
+          setGoogleModalContext(null);
+        }}
+        initialTab={googleModalTab}
+        context={googleModalContext}
+      />
     </div>
   );
 }
