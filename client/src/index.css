@@ -3791,3 +3791,556 @@ html, body {
   color: #94a3b8;
   margin-bottom: 2px;
 }
+
+/* ===== FEATURE 8: POLLUTANT INFORMATION & STANDARDS STYLES ===== */
+
+/* Header Guide Button Pill */
+.pollutant-info-btn-pill {
+  border: 1px solid rgba(20, 184, 166, 0.35) !important;
+  background: rgba(20, 184, 166, 0.08) !important;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.pollutant-info-btn-pill:hover {
+  background: rgba(20, 184, 166, 0.18) !important;
+  border-color: rgba(20, 184, 166, 0.6) !important;
+  transform: translateY(-1px);
+}
+.telemetry-status-dot.teal {
+  background: #14b8a6;
+  box-shadow: 0 0 6px rgba(20, 184, 166, 0.8);
+}
+
+/* Severity Meter Info Button */
+.severity-meter-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-severity-pollutant-info {
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  border-radius: var(--radius-sm);
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-severity-pollutant-info:hover {
+  background: rgba(56, 189, 248, 0.22);
+  border-color: rgba(56, 189, 248, 0.6);
+  color: #ffffff;
+}
+
+/* Clickable Pollutant Cells in Cards & Grids */
+.clickable-pollutant {
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.clickable-pollutant:hover {
+  background: rgba(56, 189, 248, 0.15) !important;
+  border-color: rgba(56, 189, 248, 0.4) !important;
+  transform: translateY(-1px);
+}
+.clickable-pollutant-cell {
+  cursor: pointer;
+  transition: all 0.15s ease;
+  position: relative;
+}
+.clickable-pollutant-cell:hover {
+  background: rgba(56, 189, 248, 0.14) !important;
+  border: 1px solid rgba(56, 189, 248, 0.45) !important;
+}
+
+/* Modal Overlay & Container */
+.pollutant-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(6px);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.pollutant-modal-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 980px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+  overflow: hidden;
+  animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Modal Header */
+.pollutant-modal-header {
+  padding: 16px 22px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border-default);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.pollutant-header-badge {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #14b8a6;
+  background: rgba(20, 184, 166, 0.1);
+  border: 1px solid rgba(20, 184, 166, 0.25);
+  padding: 2px 7px;
+  border-radius: 4px;
+  display: inline-block;
+  margin-bottom: 4px;
+}
+.pollutant-modal-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+.btn-close-pollutant-modal {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.15s;
+}
+.btn-close-pollutant-modal:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+/* Tab Bar */
+.pollutant-tab-bar {
+  display: flex;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border-default);
+  padding: 0 16px;
+  overflow-x: auto;
+  gap: 8px;
+}
+.pollutant-tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 12px 16px;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--text-muted);
+}
+.pollutant-tab-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.03);
+}
+.pollutant-tab-btn.active {
+  color: #38bdf8;
+  border-bottom-color: #38bdf8;
+  background: rgba(56, 189, 248, 0.05);
+  font-weight: 700;
+}
+.pollutant-tab-symbol {
+  font-size: 0.95rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+}
+.pollutant-tab-unit {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+
+/* Modal Body */
+.pollutant-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* Context Banner */
+.pollutant-context-banner {
+  background: rgba(56, 189, 248, 0.07);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.context-banner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.context-live-pill {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #38bdf8;
+  letter-spacing: 0.05em;
+}
+.context-station-tag {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #f1f5f9;
+}
+.context-banner-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+}
+.context-val-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ctx-label {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+}
+.ctx-val {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--text-bright);
+}
+.ctx-severity-chip {
+  display: inline-block;
+  border: 1px solid;
+  border-radius: 4px;
+  padding: 1px 8px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.3);
+  width: fit-content;
+}
+
+/* Concentration vs AQI vs Severity Distinction Banner */
+.aqi-distinction-callout {
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  border-radius: var(--radius-md);
+  padding: 12px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.distinction-icon {
+  font-size: 1.1rem;
+  color: #fbbf24;
+  line-height: 1.3;
+}
+.distinction-content {
+  font-size: 0.78rem;
+  color: #fef3c7;
+  line-height: 1.5;
+}
+.distinction-content strong {
+  color: #fbbf24;
+}
+.distinction-content p {
+  margin: 4px 0 0;
+  color: #e2e8f0;
+}
+
+/* Main Grid Layout */
+.pollutant-info-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+@media (max-width: 820px) {
+  .pollutant-info-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.pollutant-info-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Section Cards */
+.pollutant-section-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+}
+.section-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--accent-cyan);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 10px;
+}
+.sec-icon {
+  font-size: 0.9rem;
+}
+.pollutant-hero-title {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.pollutant-hero-title h4 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-family: var(--font-mono);
+  font-weight: 800;
+  color: #38bdf8;
+}
+.pollutant-hero-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.pollutant-short-desc {
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  line-height: 1.45;
+  margin: 0 0 10px;
+}
+.pollutant-rep-box {
+  background: rgba(0, 0, 0, 0.22);
+  border-left: 3px solid #38bdf8;
+  padding: 8px 12px;
+  border-radius: 0 4px 4px 0;
+}
+.pollutant-rep-box strong {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  font-family: var(--font-mono);
+  display: block;
+  margin-bottom: 2px;
+}
+.pollutant-rep-box p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+/* Source & Limitation Lists */
+.pollutant-sources-list,
+.pollutant-limitations-list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.pollutant-sources-list li,
+.pollutant-limitations-list li {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.45;
+}
+.section-card-text {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+/* Units Table */
+.units-table {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 10px 12px;
+  border-radius: 4px;
+}
+.unit-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.75rem;
+}
+.unit-label {
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.unit-val {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: #f1f5f9;
+}
+.unit-val.highlight {
+  color: #38bdf8;
+  font-weight: 700;
+}
+.unit-note {
+  margin: 8px 0 0;
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* Regulatory Thresholds */
+.thresholds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.threshold-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  gap: 8px;
+}
+.th-badge {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-muted);
+}
+.th-val {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: #f8fafc;
+  text-align: right;
+}
+.threshold-item.cpcb {
+  border-left: 3px solid #3b82f6;
+}
+.threshold-item.who {
+  border-left: 3px solid #10b981;
+}
+.threshold-item.good {
+  border-left: 3px solid #22c55e;
+}
+.standards-disclaimer {
+  margin-top: 8px;
+  font-size: 0.67rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  font-style: italic;
+}
+
+/* References */
+.references-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.reference-item {
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ref-org {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #94a3b8;
+  font-family: var(--font-mono);
+  text-transform: uppercase;
+}
+.ref-title-link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #38bdf8;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+}
+.ref-title-link:hover {
+  color: #7dd3fc;
+  text-decoration: underline;
+}
+.external-arrow {
+  font-size: 0.75rem;
+}
+.ref-desc {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  line-height: 1.35;
+}
+
+/* Unavailable Card */
+.pollutant-unavailable-card {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-muted);
+}
+.unavail-icon {
+  font-size: 2rem;
+  color: #f59e0b;
+}
+
+/* Modal Footer */
+.pollutant-modal-footer {
+  padding: 14px 22px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border-default);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.footer-provenance-info {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.btn-done {
+  background: var(--accent-cyan);
+  color: #0f172a;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 6px 16px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-done:hover {
+  background: #7dd3fc;
+}

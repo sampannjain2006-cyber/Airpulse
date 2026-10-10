@@ -13,6 +13,7 @@ interface SeverityMeterProps {
   recordedAt?: string;
   compact?: boolean;
   className?: string;
+  onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
 }
 
 export const SeverityMeter: React.FC<SeverityMeterProps> = ({
@@ -26,6 +27,7 @@ export const SeverityMeter: React.FC<SeverityMeterProps> = ({
   recordedAt,
   compact = false,
   className = '',
+  onOpenPollutantInfo,
 }) => {
   const effectiveIsPredicted = isPredicted || dataType === 'predicted';
   const isModelled = dataType === 'modelled';
@@ -90,7 +92,32 @@ export const SeverityMeter: React.FC<SeverityMeterProps> = ({
             </span>
           )}
         </div>
-        <span className="severity-rule-tag">CPCB NAQI (2014)</span>
+
+        <div className="severity-meter-header-right">
+          {onOpenPollutantInfo && (
+            <button
+              className="btn-severity-pollutant-info"
+              onClick={() =>
+                onOpenPollutantInfo(metric, {
+                  metric,
+                  pollutantName: result.metric_display,
+                  value: result.value,
+                  unit: result.unit,
+                  source: isForecast ? `AIRPULSE ML (${modelName || 'Ensemble'})` : isModelled ? 'Google Air Quality API' : source,
+                  dataType: isForecast ? 'predicted' : isModelled ? 'modelled' : 'observed',
+                  dateOrTimestamp: targetDate || recordedAt,
+                  severityCategory: result.category,
+                  severityColor: result.color,
+                })
+              }
+              title={`View authoritative scientific & regulatory info for ${result.metric_display}`}
+            >
+              <span className="info-icon">ⓘ</span>
+              <span>{result.metric_display} Guide</span>
+            </button>
+          )}
+          <span className="severity-rule-tag">CPCB NAQI (2014)</span>
+        </div>
       </div>
 
       {/* Main Metric & Severity Category Badge */}

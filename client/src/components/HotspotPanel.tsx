@@ -12,6 +12,7 @@ interface HotspotPanelProps {
   selectedDate: string;
   selectedModel: string;
   loading?: boolean;
+  onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
 }
 
 export const HotspotPanel: React.FC<HotspotPanelProps> = ({
@@ -25,6 +26,7 @@ export const HotspotPanel: React.FC<HotspotPanelProps> = ({
   selectedDate,
   selectedModel,
   loading = false,
+  onOpenPollutantInfo,
 }) => {
   const isForecast = mode === 'forecast';
 
@@ -126,8 +128,28 @@ export const HotspotPanel: React.FC<HotspotPanelProps> = ({
 
                     {/* Metric Grid */}
                     <div className="hotspot-metrics-grid">
-                      <div className="hotspot-metric-cell">
-                        <span className="h-metric-label">Average PM2.5</span>
+                      <div
+                        className={`hotspot-metric-cell ${onOpenPollutantInfo ? 'clickable-pollutant-cell' : ''}`}
+                        onClick={(e) => {
+                          if (onOpenPollutantInfo) {
+                            e.stopPropagation();
+                            onOpenPollutantInfo('pm25', {
+                              metric: 'pm25',
+                              pollutantName: 'PM2.5',
+                              value: h.avg_pm25,
+                              unit: 'µg/m³',
+                              stationName: `${h.title} (${h.station_count} stations)`,
+                              dateOrTimestamp: h.date,
+                              source: isForecast ? `AIRPULSE ML Forecast (${selectedModel})` : 'OpenAQ Ground Stations Telemetry',
+                              dataType: isForecast ? 'predicted' : 'observed',
+                              severityCategory: h.severity.category,
+                              severityColor: h.severity.color,
+                            });
+                          }
+                        }}
+                        title="Click to view PM2.5 standards & context for this hotspot"
+                      >
+                        <span className="h-metric-label">Average PM2.5 ⓘ</span>
                         <span className="h-metric-val">{h.avg_pm25.toFixed(1)} <small>µg/m³</small></span>
                       </div>
                       <div className="hotspot-metric-cell">

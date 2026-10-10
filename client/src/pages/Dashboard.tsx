@@ -15,6 +15,8 @@ import { SeverityMeter } from '../components/SeverityMeter';
 import { OpenAQRegistryModal } from '../components/OpenAQRegistryModal';
 import { LocationLookupModal } from '../components/LocationLookupModal';
 import { HotspotPanel } from '../components/HotspotPanel';
+import { PollutantInfoModal } from '../components/PollutantInfoModal';
+import type { ContextualMeasurement } from '../types/pollutant';
 import { openaqApi } from '../api/openaq';
 import { hotspotsApi } from '../api/hotspots';
 import type { OpenAQCoverageResponse } from '../types/openaq';
@@ -53,6 +55,17 @@ export function Dashboard() {
   const [isHotspotPanelOpen, setIsHotspotPanelOpen] = useState<boolean>(true);
   const [hotspotsLoading, setHotspotsLoading] = useState<boolean>(false);
 
+
+  // Pollutant Reference & Standards Modal states (Feature 8)
+  const [isPollutantModalOpen, setIsPollutantModalOpen] = useState<boolean>(false);
+  const [selectedPollutantId, setSelectedPollutantId] = useState<string>('pm25');
+  const [contextualMeasurement, setContextualMeasurement] = useState<ContextualMeasurement | null>(null);
+
+  const handleOpenPollutantInfo = (pollutantId: string, context?: ContextualMeasurement) => {
+    setSelectedPollutantId(pollutantId || 'pm25');
+    setContextualMeasurement(context || null);
+    setIsPollutantModalOpen(true);
+  };
 
   // Date selection states (Feature 1)
   const [mode, setMode] = useState<DashboardMode>('live');
@@ -308,6 +321,16 @@ export function Dashboard() {
               {hotspotsLoading ? 'SCANNING…' : `${hotspots.length} DETECTED`}
             </span>
           </button>
+          <button
+            className="telemetry-status-pill pollutant-info-btn-pill"
+            onClick={() => handleOpenPollutantInfo('pm25')}
+            title="Inspect authoritative pollutant definitions, CPCB/WHO standards, and concentration vs AQI guide"
+          >
+            <span className="telemetry-status-dot teal" />
+            <span className="telemetry-status-text">POLLUTANT GUIDE</span>
+            <span className="telemetry-status-separator">/</span>
+            <span className="telemetry-status-count">CPCB + WHO</span>
+          </button>
         </div>
 
         <div className="header-search">
@@ -380,6 +403,7 @@ export function Dashboard() {
         selectedDate={selectedDate}
         selectedModel={selectedModel}
         loading={hotspotsLoading}
+        onOpenPollutantInfo={handleOpenPollutantInfo}
       />
 
       {/* Main layout */}
@@ -427,6 +451,7 @@ export function Dashboard() {
                   mode={mode}
                   selectedDate={selectedDate}
                   onClick={() => setSelectedStation(s)}
+                  onOpenPollutantInfo={handleOpenPollutantInfo}
                 />
               );
             })}
@@ -477,6 +502,7 @@ export function Dashboard() {
                   source={selectedItem?.source || 'OpenAQ'}
                   targetDate={selectedItem?.prediction_date || selectedDate}
                   recordedAt={selectedItem?.recorded_at}
+                  onOpenPollutantInfo={handleOpenPollutantInfo}
                 />
               </div>
 
@@ -484,29 +510,50 @@ export function Dashboard() {
                 <>
                   <div className="pollutant-grid">
                     {[
-                      { label: mode === 'forecast' ? 'Pred PM2.5' : 'PM2.5', val: selectedItem.pm25, unit: 'µg/m³' },
+                      { id: 'pm25', label: mode === 'forecast' ? 'Pred PM2.5' : 'PM2.5', val: selectedItem.pm25, unit: 'µg/m³' },
                       {
+                        id: mode === 'forecast' ? undefined : 'pm10',
                         label: mode === 'forecast' ? 'Lower CI' : 'PM10',
                         val: mode === 'forecast' ? selectedItem.lower_bound : selectedItem.pm10,
                         unit: 'µg/m³',
                       },
                       {
+                        id: mode === 'forecast' ? undefined : 'no2',
                         label: mode === 'forecast' ? 'Upper CI' : 'NO₂',
                         val: mode === 'forecast' ? selectedItem.upper_bound : selectedItem.no2,
                         unit: 'µg/m³',
                       },
                       {
+                        id: mode === 'forecast' ? undefined : 'so2',
                         label: mode === 'forecast' ? 'Model' : 'SO₂',
                         val: mode === 'forecast' ? null : selectedItem.so2,
                         unit: mode === 'forecast' ? (selectedModel === 'weighted_ensemble' ? 'Ensemble' : selectedModel === 'hist_gradient_boosting' ? 'HGB' : selectedModel === 'random_forest' ? 'RF' : 'XGB') : 'µg/m³',
                       },
-                      { label: 'CO', val: selectedItem.co, unit: 'mg/m³' },
-                      { label: 'O₃', val: selectedItem.o3, unit: 'µg/m³' },
-                      { label: 'Temp', val: selectedItem.temperature, unit: '°C' },
-                      { label: 'Humidity', val: selectedItem.humidity, unit: '%' },
-                    ].map(({ label, val, unit }) => (
-                      <div key={label} className="pollutant-cell">
-                        <span className="pollutant-cell-label">{label}</span>
+                      { id: 'co', label: 'CO', val: selectedItem.co, unit: 'mg/m³' },
+                      { id: 'o3', label: 'O₃', val: selectedItem.o3, unit: 'µg/m³' },
+                      { id: undefined, label: 'Temp', val: selectedItem.temperature, unit: '°C' },
+                      { id: undefined, label: 'Humidity', val: selectedItem.humidity, unit: '%' },
+                    ].map(({ id, label, val, unit }) => (
+                      <div
+                        key={label}
+                        className={`pollutant-cell ${id ? 'clickable-pollutant-cell' : ''}`}
+                        onClick={() => {
+                          if (id) {
+                            handleOpenPollutantInfo(id, {
+                              metric: id,
+                              pollutantName: label,
+                              value: val,
+                              unit,
+                              stationName: selectedStation.name,
+                              dateOrTimestamp: selectedItem.recorded_at || selectedItem.prediction_date || selectedDate,
+                              source: mode === 'forecast' ? `AIRPULSE ML (${selectedItem.model_name || selectedModel})` : (selectedItem.source || 'OpenAQ'),
+                              dataType: mode === 'forecast' ? 'predicted' : 'observed',
+                            });
+                          }
+                        }}
+                        title={id ? `Click to inspect ${label} scientific definitions & guidelines` : undefined}
+                      >
+                        <span className="pollutant-cell-label">{label} {id ? 'ⓘ' : ''}</span>
                         <span className="pollutant-cell-value">
                           {val !== null && val !== undefined ? formatValue(val, unit) : unit}
                         </span>
@@ -562,6 +609,18 @@ export function Dashboard() {
           const s = stations.find((st) => st.id === id);
           if (s) setSelectedStation(s);
         }}
+        onOpenPollutantInfo={handleOpenPollutantInfo}
+      />
+
+      {/* Authoritative Pollutant Information & Standards Modal (Feature 8) */}
+      <PollutantInfoModal
+        isOpen={isPollutantModalOpen}
+        onClose={() => {
+          setIsPollutantModalOpen(false);
+          setContextualMeasurement(null);
+        }}
+        initialPollutantId={selectedPollutantId}
+        contextualMeasurement={contextualMeasurement}
       />
     </div>
   );

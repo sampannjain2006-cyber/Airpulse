@@ -12,6 +12,7 @@ interface LocationLookupModalProps {
   onClose: () => void;
   onSelectStation?: (stationId: number) => void;
   initialQuery?: string;
+  onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
 }
 
 const PRESET_LOCATIONS = [
@@ -30,6 +31,7 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
   onClose,
   onSelectStation,
   initialQuery = '',
+  onOpenPollutantInfo,
 }) => {
   const [searchInput, setSearchInput] = useState(initialQuery);
   const [loading, setLoading] = useState(false);
@@ -315,22 +317,41 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
                     dataType={primary.data_type}
                     source={primary.provider}
                     recordedAt={primary.timestamp || undefined}
+                    onOpenPollutantInfo={onOpenPollutantInfo}
                   />
                 </div>
 
                 {/* Pollutant Metrics Grid */}
                 <div className="pollutant-grid modal-pollutant-grid">
                   {[
-                    { label: 'PM2.5', val: primary.pm25, unit: 'µg/m³' },
-                    { label: 'PM10', val: primary.pm10, unit: 'µg/m³' },
-                    { label: 'NO₂', val: primary.no2, unit: 'µg/m³' },
-                    { label: 'SO₂', val: primary.so2, unit: 'µg/m³' },
-                    { label: 'CO', val: primary.co, unit: 'mg/m³' },
-                    { label: 'O₃', val: primary.o3, unit: 'µg/m³' },
-                    { label: 'AQI / Index', val: primary.aqi, unit: primary.aqi_name || 'NAQI' },
-                  ].map(({ label, val, unit }) => (
-                    <div key={label} className="pollutant-cell">
-                      <span className="pollutant-cell-label">{label}</span>
+                    { id: 'pm25', label: 'PM2.5', val: primary.pm25, unit: 'µg/m³' },
+                    { id: 'pm10', label: 'PM10', val: primary.pm10, unit: 'µg/m³' },
+                    { id: 'no2', label: 'NO₂', val: primary.no2, unit: 'µg/m³' },
+                    { id: 'so2', label: 'SO₂', val: primary.so2, unit: 'µg/m³' },
+                    { id: 'co', label: 'CO', val: primary.co, unit: 'mg/m³' },
+                    { id: 'o3', label: 'O₃', val: primary.o3, unit: 'µg/m³' },
+                    { id: 'aqi', label: 'AQI / Index', val: primary.aqi, unit: primary.aqi_name || 'NAQI' },
+                  ].map(({ id, label, val, unit }) => (
+                    <div
+                      key={label}
+                      className={`pollutant-cell ${id !== 'aqi' && onOpenPollutantInfo ? 'clickable-pollutant-cell' : ''}`}
+                      onClick={() => {
+                        if (id !== 'aqi' && onOpenPollutantInfo) {
+                          onOpenPollutantInfo(id, {
+                            metric: id,
+                            pollutantName: label,
+                            value: val,
+                            unit,
+                            stationName: primary.station_info ? `${primary.station_info.name} (${result.location.canonical_name})` : result.location.canonical_name,
+                            dateOrTimestamp: primary.timestamp,
+                            source: primary.provider,
+                            dataType: primary.data_type,
+                          });
+                        }
+                      }}
+                      title={id !== 'aqi' ? `Click to inspect ${label} scientific definitions & guidelines` : undefined}
+                    >
+                      <span className="pollutant-cell-label">{label} {id !== 'aqi' ? 'ⓘ' : ''}</span>
                       <span className="pollutant-cell-value">
                         {val !== null && val !== undefined ? formatValue(val, unit) : '—'}
                       </span>

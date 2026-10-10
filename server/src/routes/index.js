@@ -7,6 +7,7 @@ import { severityRouter } from './severity.js';
 import { openaqRouter } from './openaq.js';
 import { locationRouter } from './location.js';
 import { hotspotRouter } from './hotspots.js';
+import { pollutantRouter } from './pollutants.js';
 
 export const apiRouter = Router();
 
@@ -18,3 +19,4 @@ apiRouter.use('/severity', severityRouter);
 apiRouter.use('/openaq', openaqRouter);
 apiRouter.use('/location', locationRouter);
 apiRouter.use('/hotspots', hotspotRouter);
+apiRouter.use('/pollutants', pollutantRouter);

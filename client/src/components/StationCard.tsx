@@ -9,9 +9,10 @@ interface Props {
   onClick?: () => void;
   mode?: 'live' | 'historical' | 'forecast';
   selectedDate?: string;
+  onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
 }
 
-export function StationCard({ observation: obs, isSelected, onClick, mode = 'live', selectedDate }: Props) {
+export function StationCard({ observation: obs, isSelected, onClick, mode = 'live', selectedDate, onOpenPollutantInfo }: Props) {
   const isForecast = mode === 'forecast' || obs.data_type === 'predicted';
   const hasData = obs.has_data !== false && (obs.pm25 !== null || obs.aqi !== null);
   const stale = !isForecast && isStale(obs.recorded_at);
@@ -81,11 +82,49 @@ export function StationCard({ observation: obs, isSelected, onClick, mode = 'liv
 
       {hasData ? (
         <div className="station-card-pollutants">
-          <div className="pollutant-item">
+          <div
+            className={`pollutant-item ${onOpenPollutantInfo ? 'clickable-pollutant' : ''}`}
+            onClick={(e) => {
+              if (onOpenPollutantInfo) {
+                e.stopPropagation();
+                onOpenPollutantInfo('pm25', {
+                  metric: 'pm25',
+                  pollutantName: 'PM2.5',
+                  value: obs.pm25,
+                  unit: 'µg/m³',
+                  stationName: obs.station_name,
+                  dateOrTimestamp: obs.recorded_at || obs.prediction_date || selectedDate,
+                  source: isForecast ? `AIRPULSE ML (${obs.model_name || 'Ensemble'})` : (obs.source || 'OpenAQ'),
+                  dataType: isForecast ? 'predicted' : 'observed',
+                  severityCategory: severity?.category,
+                  severityColor: severity?.color,
+                });
+              }
+            }}
+            title="Click to view PM2.5 information & standards"
+          >
             <span className="pollutant-label">{isForecast ? 'PM2.5 (Pred)' : 'PM2.5'}</span>
             <span className="pollutant-value">{formatValue(obs.pm25, 'µg/m³')}</span>
           </div>
-          <div className="pollutant-item">
+          <div
+            className={`pollutant-item ${!isForecast && onOpenPollutantInfo ? 'clickable-pollutant' : ''}`}
+            onClick={(e) => {
+              if (!isForecast && onOpenPollutantInfo) {
+                e.stopPropagation();
+                onOpenPollutantInfo('pm10', {
+                  metric: 'pm10',
+                  pollutantName: 'PM10',
+                  value: obs.pm10,
+                  unit: 'µg/m³',
+                  stationName: obs.station_name,
+                  dateOrTimestamp: obs.recorded_at || selectedDate,
+                  source: obs.source || 'OpenAQ',
+                  dataType: 'observed',
+                });
+              }
+            }}
+            title={!isForecast ? "Click to view PM10 information & standards" : undefined}
+          >
             <span className="pollutant-label">{isForecast ? 'CI Range' : 'PM10'}</span>
             <span className="pollutant-value">
               {isForecast && obs.lower_bound != null && obs.upper_bound != null
@@ -93,7 +132,25 @@ export function StationCard({ observation: obs, isSelected, onClick, mode = 'liv
                 : formatValue(obs.pm10, 'µg/m³')}
             </span>
           </div>
-          <div className="pollutant-item">
+          <div
+            className={`pollutant-item ${!isForecast && onOpenPollutantInfo ? 'clickable-pollutant' : ''}`}
+            onClick={(e) => {
+              if (!isForecast && onOpenPollutantInfo) {
+                e.stopPropagation();
+                onOpenPollutantInfo('no2', {
+                  metric: 'no2',
+                  pollutantName: 'NO₂',
+                  value: obs.no2,
+                  unit: 'µg/m³',
+                  stationName: obs.station_name,
+                  dateOrTimestamp: obs.recorded_at || selectedDate,
+                  source: obs.source || 'OpenAQ',
+                  dataType: 'observed',
+                });
+              }
+            }}
+            title={!isForecast ? "Click to view NO₂ information & standards" : undefined}
+          >
             <span className="pollutant-label">{isForecast ? 'Severity' : 'NO₂'}</span>
             <span
               className="pollutant-value"
@@ -102,7 +159,25 @@ export function StationCard({ observation: obs, isSelected, onClick, mode = 'liv
               {isForecast ? (severity?.category || '—') : formatValue(obs.no2, 'µg/m³')}
             </span>
           </div>
-          <div className="pollutant-item">
+          <div
+            className={`pollutant-item ${!isForecast && onOpenPollutantInfo ? 'clickable-pollutant' : ''}`}
+            onClick={(e) => {
+              if (!isForecast && onOpenPollutantInfo) {
+                e.stopPropagation();
+                onOpenPollutantInfo('o3', {
+                  metric: 'o3',
+                  pollutantName: 'O₃',
+                  value: obs.o3,
+                  unit: 'µg/m³',
+                  stationName: obs.station_name,
+                  dateOrTimestamp: obs.recorded_at || selectedDate,
+                  source: obs.source || 'OpenAQ',
+                  dataType: 'observed',
+                });
+              }
+            }}
+            title={!isForecast ? "Click to view O₃ information & standards" : undefined}
+          >
             <span className="pollutant-label">{isForecast ? 'Model' : 'O₃'}</span>
             <span className="pollutant-value">{isForecast ? (obs.model_name || 'Ensemble') : formatValue(obs.o3, 'µg/m³')}</span>
           </div>
