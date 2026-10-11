@@ -11,7 +11,8 @@ export type AppView =
   | 'hotspots'
   | 'pollutants'
   | 'registry'
-  | 'coordinates';
+  | 'coordinates'
+  | 'campus';
 
 interface NavbarProps {
   currentView: AppView;
@@ -29,6 +30,7 @@ interface NavbarProps {
   onOpenStore?: () => void;
   onToggleRoutePlanner?: () => void;
   activeRoutePlanCount?: number;
+  onOpenGoogleServices?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -45,6 +47,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenStore,
   onToggleRoutePlanner,
   activeRoutePlanCount,
+  onOpenGoogleServices,
 }) => {
   const [, setSystemStatus] = useState<SystemStatus | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -124,6 +127,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'historical', label: 'Historical Trends', icon: '📈' },
     { id: 'forecast', label: 'Forecasts', icon: '🔮' },
     { id: 'hotspots', label: 'Hotspots', icon: '🔥' },
+    { id: 'campus', label: 'Campus Support', icon: '🎓' },
     { id: 'pollutants', label: 'Pollutant Guide', icon: '📖' },
   ];
 
@@ -324,6 +328,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <span className="dropdown-item-desc">
                         {activeRoutePlanCount ? `${activeRoutePlanCount} routes active` : 'Pollution-aware walking & cycling routes'}
                       </span>
+                    </div>
+                  </button>
+                )}
+                {onOpenGoogleServices && (
+                  <button
+                    className="dropdown-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setToolsDropdownOpen(false);
+                      onOpenGoogleServices();
+                    }}
+                  >
+                    <span className="dropdown-item-icon">🌐</span>
+                    <div className="dropdown-item-content">
+                      <span className="dropdown-item-title">Google Services</span>
+                      <span className="dropdown-item-desc">Maps Navigation, Calendar &amp; Tasks integration</span>
                     </div>
                   </button>
                 )}
@@ -529,6 +549,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 >
                   <span className="nav-item-icon">🗺</span>
                   <span>Route Planner</span>
+                </button>
+              )}
+
+              {onOpenGoogleServices && (
+                <button
+                  className="nature-mobile-nav-link secondary"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenGoogleServices();
+                  }}
+                >
+                  <span className="nav-item-icon">🌐</span>
+                  <span>Google Services Integration</span>
                 </button>
               )}
             </div>

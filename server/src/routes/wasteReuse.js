@@ -12,5 +12,6 @@ import {
 export const wasteReuseRouter = Router();
 
 wasteReuseRouter.get('/metadata', getWasteMetadata);
+wasteReuseRouter.get('/catalog', listWasteStreams);
 wasteReuseRouter.get('/', listWasteStreams);
 wasteReuseRouter.get('/:id', getWasteStreamById);

@@ -8,6 +8,7 @@ import type { RoutePlanResponse, TravelMode } from '../types/route';
 import type { Station } from '../types/station';
 import { routesApi } from '../api/routes';
 import { RoutePlannerMap } from './RoutePlannerMap';
+import type { GoogleContextPayload } from '../types/google';
 
 interface RoutePlanningDrawerProps {
   isOpen: boolean;
@@ -17,6 +18,7 @@ interface RoutePlanningDrawerProps {
   onRoutesCalculated: (res: RoutePlanResponse | null) => void;
   selectedRouteIndex: number;
   onSelectRouteIndex: (idx: number) => void;
+  onOpenGoogleServices?: (context: GoogleContextPayload) => void;
 }
 
 const POPULAR_DELHI_HUBS = [
@@ -36,6 +38,7 @@ export const RoutePlanningDrawer: React.FC<RoutePlanningDrawerProps> = ({
   onRoutesCalculated,
   selectedRouteIndex,
   onSelectRouteIndex,
+  onOpenGoogleServices,
 }) => {
   const [originInput, setOriginInput] = useState<string>('Connaught Place');
   const [destinationInput, setDestinationInput] = useState<string>('India Gate');
@@ -420,6 +423,52 @@ export const RoutePlanningDrawer: React.FC<RoutePlanningDrawerProps> = ({
                           >
                             {isSelected ? '✓ Currently Displayed on Map' : 'Select / Show on Map'}
                           </button>
+                          {onOpenGoogleServices && (
+                            <button
+                              type="button"
+                              className="btn-google-route-handoff"
+                              style={{
+                                marginTop: '6px',
+                                padding: '6px 10px',
+                                background: 'rgba(66, 133, 244, 0.12)',
+                                border: '1px solid rgba(66, 133, 244, 0.35)',
+                                borderRadius: '6px',
+                                color: '#8ab4f8',
+                                fontSize: '0.78rem',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: '6px',
+                                width: '100%',
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const originStr = activeRouteResponse.origin.name ||
+                                  (activeRouteResponse.origin.latitude && activeRouteResponse.origin.longitude
+                                    ? `${activeRouteResponse.origin.latitude},${activeRouteResponse.origin.longitude}`
+                                    : '');
+                                const destStr = activeRouteResponse.destination.name ||
+                                  (activeRouteResponse.destination.latitude && activeRouteResponse.destination.longitude
+                                    ? `${activeRouteResponse.destination.latitude},${activeRouteResponse.destination.longitude}`
+                                    : '');
+                                onOpenGoogleServices({
+                                  origin: originStr,
+                                  destination: destStr,
+                                  travelMode: route.mode,
+                                  destinationName: activeRouteResponse.destination.name,
+                                  pollutant: activeRouteResponse.target_pollutant,
+                                  value: route.pollution_analysis.corridor_avg_concentration,
+                                  severityCategory: route.pollution_analysis.severity?.category,
+                                });
+                              }}
+                              title="Open in Google Maps or draft calendar trip"
+                            >
+                              <span>🌐 Google Maps / Services Handoff</span>
+                              <span style={{ opacity: 0.7, fontSize: '0.7rem' }}>↗</span>
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
