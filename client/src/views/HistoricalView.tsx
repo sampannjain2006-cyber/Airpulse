@@ -91,7 +91,7 @@ export const HistoricalView: React.FC<HistoricalViewProps> = ({
         <div>
           <h1 className="page-heading">Historical Environmental Trends</h1>
           <p className="page-subheading">
-            Long-term ambient telemetry and particulate trends backed by PostgreSQL database records
+            Long-term ambient air quality and particulate trends across monitoring stations
           </p>
         </div>
 
@@ -189,14 +189,14 @@ export const HistoricalView: React.FC<HistoricalViewProps> = ({
               Time-series observations rendered via Recharts exclusively · Units: µg/m³
             </span>
           </div>
-          {loading && <span className="chart-loading-indicator">Querying PostgreSQL…</span>}
+          {loading && <span className="chart-loading-indicator">Loading records…</span>}
         </div>
 
         <div className="historical-chart-body">
           {loading ? (
             <div className="chart-skeleton-wrap">
               <div className="chart-skeleton-bar" />
-              <p>Fetching multi-day telemetry from environmental_observations table…</p>
+              <p>Loading historical environmental observations…</p>
             </div>
           ) : historyData.length > 0 ? (
             <PollutantChart data={historyData} series={selectedSeries} height={380} />

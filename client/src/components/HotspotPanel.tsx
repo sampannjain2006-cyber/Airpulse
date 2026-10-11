@@ -39,7 +39,7 @@ export const HotspotPanel: React.FC<HotspotPanelProps> = ({
       <div className="hotspot-panel-header" onClick={onToggle}>
         <div className="hotspot-header-left">
           <div className="hotspot-badge-row">
-            <span className="hotspot-tag">FEATURE 7 · POSTGIS DBSCAN</span>
+            <span className="hotspot-tag">REGIONAL CLUSTERING</span>
             <span className={`hotspot-mode-chip ${isForecast ? 'predicted' : 'observed'}`}>
               <span className={`hotspot-dot ${isForecast ? 'purple' : 'cyan'}`} />
               {isForecast ? 'PREDICTED HOTSPOTS' : 'OBSERVED HOTSPOTS'}
@@ -52,7 +52,7 @@ export const HotspotPanel: React.FC<HotspotPanelProps> = ({
             </span>
           </h3>
           <span className="hotspot-panel-subtitle">
-            Spatial clusters of $\ge 2$ distinct stations within 40km with elevated PM2.5 on {selectedDate}
+            Nearby stations within 40 km showing elevated PM2.5 on {selectedDate}
           </span>
         </div>
 
@@ -68,7 +68,7 @@ export const HotspotPanel: React.FC<HotspotPanelProps> = ({
         <div className="hotspot-panel-body">
           {/* Method and threshold explanation bar */}
           <div className="hotspot-config-bar">
-            <span className="config-item"><strong>Algorithm:</strong> PostGIS <code>ST_ClusterDBSCAN</code> (3857)</span>
+            <span className="config-item"><strong>Method:</strong> Spatial density clustering (40 km)</span>
             <span className="config-separator">·</span>
             <span className="config-item"><strong>Cluster Radius ($\epsilon$):</strong> 40 km</span>
             <span className="config-separator">·</span>
@@ -85,7 +85,7 @@ export const HotspotPanel: React.FC<HotspotPanelProps> = ({
 
           {loading ? (
             <div className="hotspot-loading-state">
-              Computing PostGIS spatial clusters for {selectedDate}…
+              Analyzing pollution clusters for {selectedDate}…
             </div>
           ) : hotspots.length > 0 ? (
             <div className="hotspot-cards-list">
@@ -143,7 +143,7 @@ export const HotspotPanel: React.FC<HotspotPanelProps> = ({
                               unit: 'µg/m³',
                               stationName: `${h.title} (${h.station_count} stations)`,
                               dateOrTimestamp: h.date,
-                              source: isForecast ? `AIRPULSE ML Forecast (${selectedModel})` : 'OpenAQ Ground Stations Telemetry',
+                              source: isForecast ? `AIRPULSE ML Forecast (${selectedModel})` : 'OpenAQ Ground Stations',
                               dataType: isForecast ? 'predicted' : 'observed',
                               severityCategory: h.severity.category,
                               severityColor: h.severity.color,

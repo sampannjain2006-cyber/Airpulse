@@ -293,7 +293,7 @@ export function Dashboard() {
       }),
       alertsApi.summary({
         observed_date: selectedDate,
-        forecast_date: selectedDate,
+        forecast_date: '2026-10-03',
         model: selectedModel,
         min_severity: alertThreshold,
         is_historical: false,
@@ -337,7 +337,7 @@ export function Dashboard() {
         onViewChange={navigateToView}
         stationCount={stations.length}
         activeReadingCount={activeObsCount}
-        lastUpdatedText="Live Ground Telemetry"
+        lastUpdatedText="Live Air Quality"
         onOpenLookup={() => navigateToView('coordinates')}
         onOpenRegistry={() => navigateToView('registry')}
         onToggleAlerts={() => setIsAlertPanelOpen(!isAlertPanelOpen)}
@@ -350,61 +350,6 @@ export function Dashboard() {
         activeRoutePlanCount={activeRoutePlan ? activeRoutePlan.routes.length : 0}
         onOpenGoogleServices={() => handleOpenGoogleServices()}
       />
-
-      {/* Row 3 Feature Action Bar / Quick Access Toolbar */}
-      <div className="dashboard-feature-status-bar">
-        <div className="feature-status-inner" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
-          <button
-            className="telemetry-status-pill waste-reuse-btn-pill"
-            onClick={() => setIsWasteReuseOpen(true)}
-            title="Industrial Waste Reuse & Pollution Prevention (CPCB & MoEFCC Circular Pathways)"
-            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(245, 158, 11, 0.3)', background: 'rgba(254, 243, 199, 0.6)', fontSize: '11px', fontWeight: 600, color: '#92400e' }}
-          >
-            <span className="telemetry-status-dot amber" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#f59e0b', display: 'inline-block' }} />
-            <span className="telemetry-status-text">WASTE REUSE</span>
-            <span className="telemetry-status-separator">/</span>
-            <span className="telemetry-status-count">CPCB + MoEFCC</span>
-          </button>
-
-          <button
-            className="telemetry-status-pill store-btn-pill"
-            onClick={() => handleOpenStore()}
-            title="Pollution Protection & Accessories Store (Certified N95/FFP2, Air Purifiers & Travel Gear)"
-            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(20, 184, 166, 0.3)', background: 'rgba(204, 251, 241, 0.6)', fontSize: '11px', fontWeight: 600, color: '#0f766e' }}
-          >
-            <span className="telemetry-status-dot teal" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#14b8a6', display: 'inline-block' }} />
-            <span className="telemetry-status-text">PROTECTION STORE</span>
-            <span className="telemetry-status-separator">/</span>
-            <span className="telemetry-status-count">PPE + PURIFIERS</span>
-          </button>
-
-          <button
-            className="telemetry-status-pill route-btn-pill"
-            onClick={() => setIsRoutePlannerOpen(!isRoutePlannerOpen)}
-            title="Pollution-Aware Route Planning for Walking & Cycling (OSRM Multi-Route & PostGIS Corridor Analysis)"
-            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.3)', background: 'rgba(209, 250, 229, 0.6)', fontSize: '11px', fontWeight: 600, color: '#065f46' }}
-          >
-            <span className={`telemetry-status-dot green ${activeRoutePlan ? 'pulse' : ''}`} style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
-            <span className="telemetry-status-text">ROUTE PLANNER</span>
-            <span className="telemetry-status-separator">/</span>
-            <span className="telemetry-status-count">
-              {activeRoutePlan ? `${activeRoutePlan.routes.length} ROUTES` : 'WALK & BIKE'}
-            </span>
-          </button>
-
-          <button
-            className="telemetry-status-pill google-services-btn-pill"
-            onClick={() => handleOpenGoogleServices()}
-            title="Google Services Integration (Google Maps Navigation, Calendar Event Drafts & Google Tasks)"
-            style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '4px 10px', borderRadius: '20px', border: '1px solid rgba(66, 133, 244, 0.3)', background: 'rgba(219, 234, 254, 0.6)', fontSize: '11px', fontWeight: 600, color: '#1d4ed8' }}
-          >
-            <span className="telemetry-status-dot blue" style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4285f4', display: 'inline-block' }} />
-            <span className="telemetry-status-text">GOOGLE SERVICES</span>
-            <span className="telemetry-status-separator">/</span>
-            <span className="telemetry-status-count">MAPS + CALENDAR + TASKS</span>
-          </button>
-        </div>
-      </div>
 
       {/* Mutually Exclusive Main View Router */}
       <main className="nature-main-content" role="main">

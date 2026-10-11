@@ -120,7 +120,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, []);
 
-  // Primary navigation views in requested order
+  // Primary navigation views in requested order (Exact 1 through 7)
   const primaryNavItems: Array<{ id: AppView; label: string; icon: string; count?: number }> = [
     { id: 'overview', label: 'Overview', icon: '🌿' },
     { id: 'live', label: 'Live Monitoring', icon: '📍', count: stationCount },
@@ -128,8 +128,12 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'forecast', label: 'Forecasts', icon: '🔮' },
     { id: 'hotspots', label: 'Hotspots', icon: '🔥' },
     { id: 'campus', label: 'Campus Support', icon: '🎓' },
-    { id: 'pollutants', label: 'Pollutant Guide', icon: '📖' },
   ];
+
+  const isToolsActive =
+    currentView === 'pollutants' ||
+    currentView === 'registry' ||
+    currentView === 'coordinates';
 
   return (
     <header className="nature-header" role="banner">
@@ -173,7 +177,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Primary Desktop Navigation (Exact order: 2. Overview through 11. Theme) */}
+        {/* Primary Desktop Navigation: 2. Overview through 9. Theme */}
         <nav className="nature-nav-desktop" aria-label="Main Navigation">
           {/* 2 to 7: Primary Views */}
           {primaryNavItems.map((item) => {
@@ -197,51 +201,25 @@ export const Navbar: React.FC<NavbarProps> = ({
             );
           })}
 
-          {/* 8. Alerts */}
-          {onToggleAlerts && (
-            <button
-              className={`nature-nav-link nav-item-alerts ${(alertCount || 0) > 0 ? 'has-active-alerts' : ''}`}
-              onClick={onToggleAlerts}
-              title="Automated Environmental Alerts & Threshold Monitoring (CPCB NAQI Standards)"
-              aria-label={`Environmental Alerts: ${alertCount || 0} active`}
-            >
-              <span className="nav-item-icon" aria-hidden="true">🚨</span>
-              <span className="nav-item-label">
-                {alertsLoading ? 'Scanning…' : 'Alerts'}
-              </span>
-              {alertCount !== undefined && alertCount > 0 && (
-                <span className="nav-item-badge alert-count-badge">{alertCount}</span>
-              )}
-            </button>
-          )}
-
-          {/* 9. Precautions */}
-          {onOpenRecommendations && (
-            <button
-              className="nature-nav-link nav-item-precautions"
-              onClick={onOpenRecommendations}
-              title="Context-Aware Environmental Precaution Recommendations (WHO & CPCB Guidance)"
-              aria-label="View Recommended Health Precautions"
-            >
-              <span className="nav-item-icon" aria-hidden="true">🛡</span>
-              <span className="nav-item-label">Precautions</span>
-            </button>
-          )}
-
-          {/* 10. Tools Dropdown */}
+          {/* 8. Tools Dropdown (Containing Health & Guidance, Environmental Tools, Location & Services) */}
           <div className="nature-tools-menu-wrap" ref={toolsRef}>
             <button
-              className={`nature-nav-link nature-btn-tool ${currentView === 'registry' || currentView === 'coordinates' ? 'active' : ''}`}
+              className={`nature-nav-link nature-btn-tool ${isToolsActive ? 'active' : ''}`}
               onClick={() => {
                 setToolsDropdownOpen(!toolsDropdownOpen);
                 setThemeDropdownOpen(false);
               }}
               aria-expanded={toolsDropdownOpen}
               aria-haspopup="true"
-              title="Spatial Tools: Geographic lookup, OpenAQ Registry, Waste Reuse, Store, Route Planner"
+              title="AirPulse Tools: Alerts, Pollutant Guide, Precautions, Waste Reuse, Store & Route Planner"
             >
               <span className="nav-item-icon" aria-hidden="true">🛠</span>
               <span className="nav-item-label">Tools</span>
+              {(alertCount || 0) > 0 && (
+                <span className="nav-item-badge alert-count-badge" title={`${alertCount} active alerts`}>
+                  {alertCount}
+                </span>
+              )}
               <svg className="dropdown-caret-svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
@@ -249,38 +227,74 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {toolsDropdownOpen && (
               <div
-                className="nature-dropdown-menu"
+                className="nature-dropdown-menu nature-tools-dropdown-menu"
                 role="menu"
-                aria-label="Spatial and Impact Tools Menu"
+                aria-label="AirPulse Tools Menu"
               >
+                {/* Group 1: Health & Guidance */}
+                <div className="dropdown-section-header">Health &amp; Guidance</div>
+
+                {onToggleAlerts && (
+                  <button
+                    className="dropdown-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setToolsDropdownOpen(false);
+                      onToggleAlerts();
+                    }}
+                  >
+                    <span className="dropdown-item-icon">🚨</span>
+                    <div className="dropdown-item-content">
+                      <div className="dropdown-item-title-row">
+                        <span className="dropdown-item-title">Alerts</span>
+                        {(alertCount || 0) > 0 && (
+                          <span className="dropdown-item-badge alert-badge">{alertCount} Active</span>
+                        )}
+                      </div>
+                      <span className="dropdown-item-desc">
+                        {alertsLoading ? 'Scanning active feeds…' : 'Automated air quality hazard alerts'}
+                      </span>
+                    </div>
+                  </button>
+                )}
+
                 <button
-                  className={`dropdown-item ${currentView === 'coordinates' ? 'active-item' : ''}`}
+                  className={`dropdown-item ${currentView === 'pollutants' ? 'active-item' : ''}`}
                   role="menuitem"
                   onClick={() => {
                     setToolsDropdownOpen(false);
-                    onViewChange('coordinates');
+                    onViewChange('pollutants');
                   }}
                 >
-                  <span className="dropdown-item-icon">📍</span>
+                  <span className="dropdown-item-icon">📖</span>
                   <div className="dropdown-item-content">
-                    <span className="dropdown-item-title">Lat / Lon Lookup</span>
-                    <span className="dropdown-item-desc">Resolve coordinates &amp; PostGIS proximity</span>
+                    <span className="dropdown-item-title">Pollutant Guide</span>
+                    <span className="dropdown-item-desc">Health effects &amp; standards for key pollutants</span>
                   </div>
                 </button>
-                <button
-                  className={`dropdown-item ${currentView === 'registry' ? 'active-item' : ''}`}
-                  role="menuitem"
-                  onClick={() => {
-                    setToolsDropdownOpen(false);
-                    onViewChange('registry');
-                  }}
-                >
-                  <span className="dropdown-item-icon">🌐</span>
-                  <div className="dropdown-item-content">
-                    <span className="dropdown-item-title">OpenAQ Registry</span>
-                    <span className="dropdown-item-desc">Explore Indian monitoring stations catalog</span>
-                  </div>
-                </button>
+
+                {onOpenRecommendations && (
+                  <button
+                    className="dropdown-item"
+                    role="menuitem"
+                    onClick={() => {
+                      setToolsDropdownOpen(false);
+                      onOpenRecommendations();
+                    }}
+                  >
+                    <span className="dropdown-item-icon">🛡️</span>
+                    <div className="dropdown-item-content">
+                      <span className="dropdown-item-title">Precautions</span>
+                      <span className="dropdown-item-desc">Health guidance &amp; protective action plans</span>
+                    </div>
+                  </button>
+                )}
+
+                <div className="dropdown-divider" />
+
+                {/* Group 2: Environmental Tools */}
+                <div className="dropdown-section-header">Environmental Tools</div>
+
                 {onOpenWasteReuse && (
                   <button
                     className="dropdown-item"
@@ -292,11 +306,12 @@ export const Navbar: React.FC<NavbarProps> = ({
                   >
                     <span className="dropdown-item-icon">🏭</span>
                     <div className="dropdown-item-content">
-                      <span className="dropdown-item-title">Industrial Waste Reuse</span>
-                      <span className="dropdown-item-desc">CPCB circular by-product reuse catalog</span>
+                      <span className="dropdown-item-title">Waste Reuse</span>
+                      <span className="dropdown-item-desc">Circular pathways for industrial by-products</span>
                     </div>
                   </button>
                 )}
+
                 {onOpenStore && (
                   <button
                     className="dropdown-item"
@@ -306,13 +321,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onOpenStore();
                     }}
                   >
-                    <span className="dropdown-item-icon">🛍</span>
+                    <span className="dropdown-item-icon">🛍️</span>
                     <div className="dropdown-item-content">
                       <span className="dropdown-item-title">Protection Store</span>
-                      <span className="dropdown-item-desc">Certified PPE, air purifiers &amp; travel gear</span>
+                      <span className="dropdown-item-desc">Certified PPE, air purifiers &amp; protective gear</span>
                     </div>
                   </button>
                 )}
+
                 {onToggleRoutePlanner && (
                   <button
                     className="dropdown-item"
@@ -322,15 +338,54 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onToggleRoutePlanner();
                     }}
                   >
-                    <span className="dropdown-item-icon">🗺</span>
+                    <span className="dropdown-item-icon">🗺️</span>
                     <div className="dropdown-item-content">
-                      <span className="dropdown-item-title">Route Planner</span>
-                      <span className="dropdown-item-desc">
-                        {activeRoutePlanCount ? `${activeRoutePlanCount} routes active` : 'Pollution-aware walking & cycling routes'}
-                      </span>
+                      <div className="dropdown-item-title-row">
+                        <span className="dropdown-item-title">Route Planner</span>
+                        {activeRoutePlanCount ? (
+                          <span className="dropdown-item-badge success">{activeRoutePlanCount} Routes</span>
+                        ) : null}
+                      </div>
+                      <span className="dropdown-item-desc">Low-pollution walking &amp; cycling corridors</span>
                     </div>
                   </button>
                 )}
+
+                <div className="dropdown-divider" />
+
+                {/* Group 3: Location & Services */}
+                <div className="dropdown-section-header">Location &amp; Services</div>
+
+                <button
+                  className={`dropdown-item ${currentView === 'coordinates' ? 'active-item' : ''}`}
+                  role="menuitem"
+                  onClick={() => {
+                    setToolsDropdownOpen(false);
+                    onViewChange('coordinates');
+                  }}
+                >
+                  <span className="dropdown-item-icon">📍</span>
+                  <div className="dropdown-item-content">
+                    <span className="dropdown-item-title">Coordinates Lookup</span>
+                    <span className="dropdown-item-desc">Find closest monitoring stations for any location</span>
+                  </div>
+                </button>
+
+                <button
+                  className={`dropdown-item ${currentView === 'registry' ? 'active-item' : ''}`}
+                  role="menuitem"
+                  onClick={() => {
+                    setToolsDropdownOpen(false);
+                    onViewChange('registry');
+                  }}
+                >
+                  <span className="dropdown-item-icon">🌐</span>
+                  <div className="dropdown-item-content">
+                    <span className="dropdown-item-title">Station Registry</span>
+                    <span className="dropdown-item-desc">Explore national monitoring stations catalog</span>
+                  </div>
+                </button>
+
                 {onOpenGoogleServices && (
                   <button
                     className="dropdown-item"
@@ -340,10 +395,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onOpenGoogleServices();
                     }}
                   >
-                    <span className="dropdown-item-icon">🌐</span>
+                    <span className="dropdown-item-icon">⚡</span>
                     <div className="dropdown-item-content">
                       <span className="dropdown-item-title">Google Services</span>
-                      <span className="dropdown-item-desc">Maps Navigation, Calendar &amp; Tasks integration</span>
+                      <span className="dropdown-item-desc">Maps navigation, Calendar drafts &amp; Google Tasks</span>
                     </div>
                   </button>
                 )}
@@ -351,7 +406,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* 11. Theme Switcher (Immediately after Tools) */}
+          {/* 9. Theme Switcher (At the far right) */}
           <div className="nature-theme-menu-wrap" ref={themeRef}>
             <button
               className={`nature-nav-link nav-btn-theme ${themeDropdownOpen ? 'theme-active' : ''}`}
@@ -440,7 +495,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       {mobileMenuOpen && (
         <div className="nature-mobile-drawer" role="dialog" aria-modal="true">
           <nav className="nature-mobile-nav">
-            {/* Primary navigation items 2 through 7 */}
+            {/* Primary navigation views 1 to 6 */}
             {primaryNavItems.map((item) => {
               const isActive = currentView === item.id;
               return (
@@ -461,58 +516,48 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
 
-            {/* 8. Alerts */}
-            {onToggleAlerts && (
-              <button
-                className="nature-mobile-nav-link"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onToggleAlerts();
-                }}
-              >
-                <span className="nav-item-icon">🚨</span>
-                <span>Environmental Alerts ({alertCount || 0})</span>
-              </button>
-            )}
-
-            {/* 9. Precautions */}
-            {onOpenRecommendations && (
-              <button
-                className="nature-mobile-nav-link"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenRecommendations();
-                }}
-              >
-                <span className="nav-item-icon">🛡</span>
-                <span>Health Precautions &amp; Actions</span>
-              </button>
-            )}
-
-            {/* 10. Tools Section */}
+            {/* Health & Guidance Section */}
             <div className="mobile-tools-section">
-              <span className="mobile-tools-heading">Analytical &amp; Impact Tools</span>
+              <span className="mobile-tools-heading">Health &amp; Guidance</span>
+              {onToggleAlerts && (
+                <button
+                  className="nature-mobile-nav-link secondary"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onToggleAlerts();
+                  }}
+                >
+                  <span className="nav-item-icon">🚨</span>
+                  <span>Environmental Alerts ({alertCount || 0})</span>
+                </button>
+              )}
               <button
-                className={`nature-mobile-nav-link secondary ${currentView === 'coordinates' ? 'active' : ''}`}
+                className={`nature-mobile-nav-link secondary ${currentView === 'pollutants' ? 'active' : ''}`}
                 onClick={() => {
                   setMobileMenuOpen(false);
-                  onViewChange('coordinates');
+                  onViewChange('pollutants');
                 }}
               >
-                <span className="nav-item-icon">📍</span>
-                <span>Lat / Lon Proximity Lookup</span>
+                <span className="nav-item-icon">📖</span>
+                <span>Pollutant Guide</span>
               </button>
-              <button
-                className={`nature-mobile-nav-link secondary ${currentView === 'registry' ? 'active' : ''}`}
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onViewChange('registry');
-                }}
-              >
-                <span className="nav-item-icon">🌐</span>
-                <span>OpenAQ Network Registry</span>
-              </button>
+              {onOpenRecommendations && (
+                <button
+                  className="nature-mobile-nav-link secondary"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenRecommendations();
+                  }}
+                >
+                  <span className="nav-item-icon">🛡️</span>
+                  <span>Health Precautions &amp; Actions</span>
+                </button>
+              )}
+            </div>
 
+            {/* Environmental Tools Section */}
+            <div className="mobile-tools-section">
+              <span className="mobile-tools-heading">Environmental Tools</span>
               {onOpenWasteReuse && (
                 <button
                   className="nature-mobile-nav-link secondary"
@@ -525,7 +570,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <span>Industrial Waste Reuse</span>
                 </button>
               )}
-
               {onOpenStore && (
                 <button
                   className="nature-mobile-nav-link secondary"
@@ -534,11 +578,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onOpenStore();
                   }}
                 >
-                  <span className="nav-item-icon">🛍</span>
+                  <span className="nav-item-icon">🛍️</span>
                   <span>Protection Store</span>
                 </button>
               )}
-
               {onToggleRoutePlanner && (
                 <button
                   className="nature-mobile-nav-link secondary"
@@ -547,11 +590,35 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onToggleRoutePlanner();
                   }}
                 >
-                  <span className="nav-item-icon">🗺</span>
+                  <span className="nav-item-icon">🗺️</span>
                   <span>Route Planner</span>
                 </button>
               )}
+            </div>
 
+            {/* Location & Services Section */}
+            <div className="mobile-tools-section">
+              <span className="mobile-tools-heading">Location &amp; Services</span>
+              <button
+                className={`nature-mobile-nav-link secondary ${currentView === 'coordinates' ? 'active' : ''}`}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onViewChange('coordinates');
+                }}
+              >
+                <span className="nav-item-icon">📍</span>
+                <span>Coordinates Lookup</span>
+              </button>
+              <button
+                className={`nature-mobile-nav-link secondary ${currentView === 'registry' ? 'active' : ''}`}
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onViewChange('registry');
+                }}
+              >
+                <span className="nav-item-icon">🌐</span>
+                <span>Station Registry</span>
+              </button>
               {onOpenGoogleServices && (
                 <button
                   className="nature-mobile-nav-link secondary"
@@ -560,13 +627,13 @@ export const Navbar: React.FC<NavbarProps> = ({
                     onOpenGoogleServices();
                   }}
                 >
-                  <span className="nav-item-icon">🌐</span>
-                  <span>Google Services Integration</span>
+                  <span className="nav-item-icon">⚡</span>
+                  <span>Google Services</span>
                 </button>
               )}
             </div>
 
-            {/* 11. Theme Selection Section in Mobile */}
+            {/* Application Theme Section */}
             <div className="mobile-tools-section">
               <span className="mobile-tools-heading">Application Theme</span>
               {THEME_OPTIONS.map((opt) => (

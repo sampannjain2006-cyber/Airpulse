@@ -348,7 +348,7 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
               : '33 / 40 Stations'}
           </span>
           <span className="stat-hint">
-            {snapshot?.stations_insufficient_data ?? 7} stations have &lt;14d historical telemetry
+            {snapshot?.stations_insufficient_data ?? 7} stations have limited historical records (&lt;14 days)
           </span>
         </div>
 
@@ -374,7 +374,7 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
             <span>📅</span> Five-Day Forecast Horizon (Select Target Date)
           </span>
           <span className="timeline-reference-tag">
-            Reference Baseline: {horizon?.reference_date || '2026-10-02'} · Multi-Step Autoregressive
+            Baseline Date: {horizon?.reference_date || '2026-10-02'}
           </span>
         </div>
 
@@ -771,7 +771,7 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
                       </div>
                     ) : (
                       <div style={{ fontSize: '0.68rem', color: '#94a3b8' }}>
-                        &lt;14 days telemetry (Honest Policy)
+                        Insufficient historical records (&lt;14 days)
                       </div>
                     )}
                   </div>

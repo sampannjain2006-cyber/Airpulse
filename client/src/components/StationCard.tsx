@@ -109,7 +109,7 @@ export const StationCard: React.FC<StationCardProps> = ({
         ) : (
           <div className="card-severity-tag inactive">
             <span className="dot gray" />
-            <span className="severity-text">PENDING INGESTION</span>
+            <span className="severity-text">PENDING READINGS</span>
           </div>
         )}
       </div>
@@ -149,7 +149,7 @@ export const StationCard: React.FC<StationCardProps> = ({
           <span className="banner-icon">ℹ️</span>
           <div className="banner-text">
             <strong>No current ground readings</strong>
-            <span>Telemetry pending from OpenAQ sensor</span>
+            <span>Readings pending from station sensor</span>
           </div>
         </div>
       )}

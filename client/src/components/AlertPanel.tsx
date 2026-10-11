@@ -101,7 +101,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
           <div className="alert-panel-header-right">
             {/* Threshold Configuration Selector */}
             <div className="threshold-selector-wrap">
-              <label htmlFor="alert-rule-select" className="threshold-label">Rule:</label>
+              <label htmlFor="alert-rule-select" className="threshold-label">Threshold:</label>
               <select
                 id="alert-rule-select"
                 className="threshold-select"
@@ -154,7 +154,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
             role="tab"
             aria-selected={activeTab === 'forecast'}
           >
-            <span>5-Day ML Forecasts</span>
+            <span>5-Day Forecasts</span>
             <span className="tab-pill-count">{totalForecast}</span>
           </button>
         </div>
@@ -177,17 +177,17 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
           {loading ? (
             <div className="alert-loading-state">
               <div className="pulse-indicator healthy" style={{ margin: '0 auto 12px auto' }} />
-              <span>Evaluating environmental sensor telemetry against CPCB NAQI thresholds…</span>
+              <span>Checking active air quality readings against safety thresholds…</span>
             </div>
           ) : displayAlerts.length === 0 ? (
             <div className="alert-empty-state">
               <div className="empty-shield-icon" aria-hidden="true">🛡</div>
-              <h4>No Active Alerts Triggered</h4>
+              <h4>No Active Alerts</h4>
               <p>
-                All reporting stations currently comply with the active <strong>{selectedThreshold.toUpperCase()}</strong> threshold rule for this time horizon.
+                No alerts currently meet the selected threshold for this time horizon.
               </p>
               <div className="empty-state-hint">
-                Threshold criteria strictly adhere to the Central Pollution Control Board (CPCB) NAQI standard. You can adjust the sensitivity using the Rule selector above.
+                Threshold criteria adhere to National Air Quality Index standards. You can adjust the sensitivity using the Threshold selector above.
               </div>
             </div>
           ) : (
@@ -210,7 +210,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
                         <span
                           className={`alert-type-indicator ${isObs ? 'obs' : 'pred'}`}
                         >
-                          {isObs ? '📡 OBSERVED GROUND DATA' : '⚡ 5-DAY ML FORECAST'}
+                          {isObs ? '● Observed Reading' : '🔮 5-Day Forecast'}
                         </span>
                         {alert.is_historical && (
                           <span className="alert-hist-tag">HISTORICAL EVENT</span>
@@ -340,7 +340,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
         {/* Panel Footer */}
         <div className="alert-panel-footer">
           <span className="footer-rule-notice">
-            CPCB NAQI Standards · Model: <strong>{selectedModel}</strong> · Ground Telemetry &amp; 5-Day ML Predictions
+            CPCB NAQI Standards · Model: <strong>{selectedModel}</strong> · Live Ground Readings &amp; 5-Day Forecasts
           </span>
           <button className="btn-close-alert-footer" onClick={onToggle}>
             Done

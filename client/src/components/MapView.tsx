@@ -295,16 +295,16 @@ export function MapView({
             <div class="map-popup-empty-box">
               <span class="empty-icon">⚠️</span>
               <div>
-                <strong>ML Prediction Unavailable</strong>
-                <p>Insufficient historical telemetry (&lt;14 days) to generate forecast.</p>
+                <strong>Forecast Unavailable</strong>
+                <p>Insufficient historical records (&lt;14 days) to generate forecast.</p>
               </div>
             </div>
           ` : `
             <div class="map-popup-empty-box">
               <span class="empty-icon">📡</span>
               <div>
-                <strong>Observation Offline</strong>
-                <p>Telemetry pending from OpenAQ sensor.</p>
+                <strong>Reading Offline</strong>
+                <p>Readings pending from station sensor.</p>
               </div>
             </div>
           `}
@@ -323,7 +323,7 @@ export function MapView({
                 : (aqi !== null ? `AQI: <strong>${Math.round(aqi)}</strong> (${getAqiInfo(aqi).category})` : `PM2.5: <strong>${pm25} µg/m³</strong>`)
               }
             </div>
-          ` : `<div class="tooltip-empty">Telemetry pending</div>`}
+          ` : `<div class="tooltip-empty">Readings pending</div>`}
         </div>
       `;
 
@@ -422,7 +422,7 @@ export function MapView({
             <strong>Contributing Stations:</strong>
             ${h.contributing_stations.map(st => `<div>· ${st.name}: <b>${Math.round(st.pm25)} µg/m³</b></div>`).join('')}
           </div>
-          <div class="map-popup-footer">Algorithm: PostGIS ST_ClusterDBSCAN · HDII: ${h.scoring.value}</div>
+          <div class="map-popup-footer">Regional Cluster · Severity Score: ${h.scoring.value}</div>
         </div>
       `;
 

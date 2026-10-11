@@ -4,6 +4,7 @@ import {
   getAlertSummary,
   SEVERITY_LEVEL_MAP,
   LEVEL_TO_NAME_MAP,
+  ALLOWED_FORECAST_DATES,
 } from '../services/alertService.js';
 
 export async function listAlerts(req, res, next) {
@@ -44,7 +45,7 @@ export async function listAlerts(req, res, next) {
         isHistorical,
       }),
       getForecastAlerts({
-        date: date && date >= '2026-10-03' ? date : '2026-10-03',
+        date: date && ALLOWED_FORECAST_DATES.includes(date) ? date : ALLOWED_FORECAST_DATES[0],
         model,
         minSeverity: min_severity,
       }),
@@ -73,9 +74,13 @@ export async function getSummary(req, res, next) {
 
     const isHistorical = is_historical === 'true' || is_historical === '1';
 
+    const safeForecastDate = ALLOWED_FORECAST_DATES.includes(forecast_date)
+      ? forecast_date
+      : ALLOWED_FORECAST_DATES[0];
+
     const summary = await getAlertSummary({
       observedDate: observed_date,
-      forecastDate: forecast_date,
+      forecastDate: safeForecastDate,
       model,
       minSeverity: min_severity,
       isHistorical,

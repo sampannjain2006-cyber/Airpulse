@@ -38,7 +38,6 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
       <div className="hotspots-header">
         <div>
           <div className="hotspots-tag-row">
-            <span className="nature-tag red">POSTGIS DBSCAN</span>
             <span className="nature-tag green">SPATIAL CLUSTERING</span>
           </div>
           <h1 className="page-heading">Geospatial Pollution Hotspots</h1>
@@ -68,7 +67,7 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
           className={`nature-tab-btn ${activeTab === 'algorithm' ? 'active' : ''}`}
           onClick={() => setActiveTab('algorithm')}
         >
-          <span>DBSCAN Methodology &amp; Criteria</span>
+          <span>Clustering Methodology &amp; Criteria</span>
         </button>
       </div>
 
@@ -78,14 +77,14 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
           <aside className="hotspots-list-column">
             <div className="hotspot-list-heading">
               <span>Clusters on {selectedDate}</span>
-              <span className="mode-badge">{mode === 'forecast' ? `Forecast (${selectedModel})` : 'Live Telemetry'}</span>
+              <span className="mode-badge">{mode === 'forecast' ? `Forecast (${selectedModel})` : 'Live Readings'}</span>
             </div>
 
             <div className="hotspots-scroll-area">
               {loading ? (
                 <div className="hotspots-loading-state">
                   <div className="hotspots-loading-spinner" />
-                  <p>Running PostGIS ST_ClusterDBSCAN spatial analysis…</p>
+                  <p>Analyzing regional pollution patterns…</p>
                 </div>
               ) : hotspots.length > 0 ? (
                 hotspots.map((hs) => {
@@ -218,8 +217,8 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
           <div className="methodology-header">
             <span className="methodology-icon">📐</span>
             <div>
-              <h2>PostGIS ST_ClusterDBSCAN Mathematical Formulation</h2>
-              <p>Density-Based Spatial Clustering of Applications with Noise</p>
+              <h2>Regional Density-Based Spatial Clustering</h2>
+              <p>Density-Based Spatial Clustering of Applications with Noise (DBSCAN)</p>
             </div>
           </div>
 
@@ -238,7 +237,7 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
               <h3>Spatial Distance Metric (Epsilon)</h3>
               <p>
                 Epsilon is parameterized at <strong>$\varepsilon = 40,000$ meters (40 km)</strong> using ellipsoidal
-                geodetic distance via PostGIS spherical geometry casts (`ST_ClusterDBSCAN(geom, eps := 40000, minpoints := 2)`).
+                geodetic distance with a clustering radius threshold of 40 km and a minimum of 2 stations.
               </p>
             </div>
 

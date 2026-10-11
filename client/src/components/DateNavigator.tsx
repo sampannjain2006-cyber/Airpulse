@@ -54,7 +54,7 @@ export function DateNavigator({
           onClick={() => onModeChange('live')}
         >
           <span className="date-tab-dot live-dot" />
-          <span className="date-tab-title">LIVE TELEMETRY</span>
+          <span className="date-tab-title">LIVE READINGS</span>
           <span className="date-tab-badge">Latest</span>
         </button>
 
@@ -84,10 +84,10 @@ export function DateNavigator({
         {mode === 'live' && (
           <div className="date-nav-sub live-sub">
             <span className="date-control-desc">
-              Viewing latest realtime telemetry feeds from all active Indian monitoring stations.
+              Viewing latest air quality readings from active Indian monitoring stations.
             </span>
             <span className="date-control-tag live-tag">
-              STREAM: REALTIME (OpenAQ)
+              DATA SOURCE: OPENAQ
             </span>
           </div>
         )}
@@ -161,7 +161,7 @@ export function DateNavigator({
               <span className="status-metric-label">Active Mode:</span>
               <span className="status-metric-val">
                 {mode === 'live'
-                  ? 'Realtime Telemetry'
+                  ? 'Live Air Quality Readings'
                   : mode === 'historical'
                   ? `Historical Snapshot (${selectedDate})`
                   : `ML Forecast (${selectedDate})`}

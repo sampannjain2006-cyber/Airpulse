@@ -72,7 +72,7 @@ export const AirQualityMeter: React.FC<AirQualityMeterProps> = ({
           <div>
             <strong>Air Quality Index (AQI) Unavailable</strong>
             <p>
-              This station currently reports no active particulate telemetry (PM2.5 or PM10) required to compute
+              This station currently reports no active particulate readings (PM2.5 or PM10) required to compute
               an official CPCB NAQI rating. Check individual pollutant readings below.
             </p>
           </div>
@@ -97,7 +97,7 @@ export const AirQualityMeter: React.FC<AirQualityMeterProps> = ({
 
           {!isAuthoritativeAqi && (
             <span className="aqi-notice-chip" title="Full multi-pollutant AQI requires 3+ parameters">
-              AQI unavailable (Single-pollutant telemetry)
+              AQI unavailable (Single-pollutant reading)
             </span>
           )}
         </div>

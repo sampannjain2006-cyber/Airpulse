@@ -128,7 +128,7 @@ export const PollutantInfoModal: React.FC<PollutantInfoModalProps> = ({
                     <div className="context-val-box">
                       <span className="ctx-label">Status &amp; Source:</span>
                       <span className="ctx-val">
-                        {contextualMeasurement.source || 'OpenAQ Ground Telemetry'}
+                        {contextualMeasurement.source || 'OpenAQ Ground Station'}
                       </span>
                     </div>
 

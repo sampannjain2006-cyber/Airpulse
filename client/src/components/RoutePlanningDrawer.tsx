@@ -142,7 +142,7 @@ export const RoutePlanningDrawer: React.FC<RoutePlanningDrawerProps> = ({
             </div>
             <h2 className="route-drawer-title">Walking &amp; Cycling Journey Planner</h2>
             <p className="route-drawer-subtitle">
-              Interactive corridor navigation with real-time PostGIS sensor exposure analysis (3 km buffer).
+              Interactive route navigation with real-time pollution exposure analysis along the corridor.
             </p>
           </div>
           <button className="route-drawer-close-btn" onClick={onClose} aria-label="Close route planner">
@@ -279,7 +279,7 @@ export const RoutePlanningDrawer: React.FC<RoutePlanningDrawerProps> = ({
                 <div className="route-spinner" />
                 <div className="route-loading-text">
                   <strong>Querying Road Network &amp; Corridor Sensors…</strong>
-                  <p>Calculating pedestrian/bicycle paths and intersecting with nearby PostGIS monitoring stations.</p>
+                  <p>Calculating walking & cycling paths and checking air quality at nearby stations.</p>
                 </div>
               </div>
             )}

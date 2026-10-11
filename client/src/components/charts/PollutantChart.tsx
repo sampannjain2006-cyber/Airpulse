@@ -32,8 +32,8 @@ export function PollutantChart({ data, series = ['pm25', 'pm10'], height = 280 }
     return (
       <div className="nature-chart-empty">
         <span className="empty-chart-icon">🌱</span>
-        <p className="empty-chart-text">No historical telemetry recorded for this station.</p>
-        <span className="empty-chart-hint">Observations will populate once ground sensor logs are synchronized.</span>
+        <p className="empty-chart-text">No historical air quality records for this station.</p>
+        <span className="empty-chart-hint">Readings will populate once ground sensor logs are synchronized.</span>
       </div>
     );
   }

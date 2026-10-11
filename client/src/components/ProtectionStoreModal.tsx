@@ -435,7 +435,7 @@ export const ProtectionStoreModal: React.FC<ProtectionStoreModalProps> = ({
                     <p>
                       Observed or forecast concentration for {context?.pollutant_name || 'selected pollutant'} is not available.
                       Missing or stale monitoring data is never treated as zero or safe.
-                      Please review neighboring active monitoring stations or check back once telemetry is refreshed.
+                      Please review neighboring active monitoring stations or check back once readings are refreshed.
                     </p>
                   </div>
                 </div>

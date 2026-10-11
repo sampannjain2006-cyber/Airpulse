@@ -53,7 +53,7 @@ export function PredictionForecast({ data, loading, onViewOnMap }: Props) {
             </h3>
           </div>
           <span className="forecast-status-chip warning">
-            ⚠️ Insufficient Historical Telemetry
+            ⚠️ Insufficient Historical Data
           </span>
         </div>
 
@@ -181,7 +181,7 @@ export function PredictionForecast({ data, loading, onViewOnMap }: Props) {
       <div className="forecast-distinction-banner">
         <span className="info-icon">ℹ️</span>
         <span>
-          <strong>Data Provenance Notice:</strong> Observed ground measurements are strictly distinguished from future machine-learning projections. Model outputs represent statistical estimates derived from historical telemetry.
+          <strong>Data Provenance Notice:</strong> Observed ground measurements are strictly distinguished from future machine-learning projections. Model outputs represent statistical estimates derived from historical air quality readings.
         </span>
       </div>
 
@@ -218,7 +218,7 @@ export function PredictionForecast({ data, loading, onViewOnMap }: Props) {
                   {baseSeverity.category}
                 </div>
               )}
-              <div className="step-card-footer observed">Ground Telemetry</div>
+              <div className="step-card-footer observed">Observed Ground Reading</div>
             </div>
           );
         })()}

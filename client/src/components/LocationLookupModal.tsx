@@ -99,14 +99,14 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
         <div className="modal-header">
           <div className="modal-title-wrap">
             <div className="modal-badge-row">
-              <span className="modal-badge-pill geo-pill">FEATURE 6 · SPATIAL RESOLUTION</span>
+              <span className="modal-badge-pill geo-pill">LOCATION RESOLUTION</span>
               <span className={`modal-badge-pill ${googleStatus?.configured ? 'status-green' : 'status-amber'}`}>
-                GOOGLE API: {googleStatus?.configured ? 'ONLINE' : 'UNCONFIGURED (SAFE FALLBACK)'}
+                {googleStatus?.configured ? 'GOOGLE SERVICES: ACTIVE' : 'GROUND NETWORK: ACTIVE'}
               </span>
             </div>
             <h2 className="modal-title">Location Resolution &amp; Air Quality Intelligence</h2>
             <p className="modal-description">
-              Resolve any Indian location, test OpenAQ PostGIS proximity &amp; observational freshness, and query Google Air Quality fallback.
+              Resolve any Indian location, find nearby monitoring stations and observational freshness, and inspect ambient air quality.
             </p>
           </div>
           <button className="btn-close-modal" onClick={onClose} title="Close">✕</button>
@@ -247,7 +247,7 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
             <div className={`step-item ${result.openaq_status.nearby_stations_count > 0 ? 'step-completed' : 'step-warning'}`}>
               <span className="step-num">2</span>
               <div className="step-text">
-                <span className="step-name">PostGIS Search</span>
+                <span className="step-name">Proximity Search</span>
                 <span className="step-detail">
                   {result.openaq_status.nearby_stations_count} station(s) within {result.criteria.proximity_radius_km}km
                 </span>
@@ -420,7 +420,7 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
               <div className="location-unavailable-card">
                 <div className="unavailable-icon">⚠</div>
                 <div className="unavailable-content">
-                  <h4>Air Quality Telemetry Unavailable for this Coordinate</h4>
+                  <h4>Air Quality Readings Unavailable for this Coordinate</h4>
                   <p className="unavailable-reason">
                     <strong>OpenAQ Status:</strong> {result.openaq_status.reason}
                   </p>
@@ -439,7 +439,7 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
             {/* Nearby OpenAQ Reference Stations Context (PostGIS) */}
             <div className="nearby-reference-section">
               <h4 className="nearby-reference-title">
-                Nearby OpenAQ Reference Stations in PostGIS Registry ({result.nearby_openaq_reference.length} found)
+                Nearby Reference Stations ({result.nearby_openaq_reference.length} found)
               </h4>
               <p className="nearby-reference-subtitle">
                 Expanded Indian OpenAQ network stations sorted by proximity to the resolved coordinate:
@@ -453,7 +453,7 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
                         <th>Station Name</th>
                         <th>City / Region</th>
                         <th>Distance</th>
-                        <th>Last Telemetry</th>
+                        <th>Last Reading</th>
                         <th>Monitored Sensors</th>
                         <th>Action</th>
                       </tr>
@@ -475,7 +475,7 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
                             ) : st.last_updated_at ? (
                               <span className="time-badge muted">{new Date(st.last_updated_at).toLocaleDateString('en-IN')}</span>
                             ) : (
-                              <span className="time-badge muted">No telemetry</span>
+                              <span className="time-badge muted">No readings</span>
                             )}
                           </td>
                           <td>

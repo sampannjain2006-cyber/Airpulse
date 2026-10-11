@@ -128,7 +128,7 @@ export const OpenAQRegistryModal: React.FC<Props> = ({ isOpen, onClose, onSelect
             <div className="coverage-metric-card">
               <span className="coverage-num">{coverage.dashboard_stations}</span>
               <span className="coverage-label">Active Dashboard Set</span>
-              <span className="coverage-sublabel">Telemetry & Forecasts</span>
+              <span className="coverage-sublabel">Readings &amp; Forecasts</span>
             </div>
             <div className="coverage-metric-card">
               <span className="coverage-num">{coverage.expanded_network_stations}</span>
@@ -149,7 +149,7 @@ export const OpenAQRegistryModal: React.FC<Props> = ({ isOpen, onClose, onSelect
             className={`openaq-tab-btn ${activeTab === 'nearby' ? 'active' : ''}`}
             onClick={() => setActiveTab('nearby')}
           >
-            📍 PostGIS Nearby Station Search
+            📍 Nearby Station Search
           </button>
           <button
             className={`openaq-tab-btn ${activeTab === 'directory' ? 'active' : ''}`}
@@ -226,7 +226,7 @@ export const OpenAQRegistryModal: React.FC<Props> = ({ isOpen, onClose, onSelect
             <div className="nearby-results-section">
               <div className="nearby-results-header">
                 <h4>Nearby OpenAQ Stations ({nearbyResults.length} found within {radiusKm} km)</h4>
-                <span className="postgis-indicator">Powered by PostGIS ST_DWithin &amp; ST_Distance</span>
+                <span className="postgis-indicator">Calculated by geodetic distance</span>
               </div>
 
               <div className="nearby-results-list">

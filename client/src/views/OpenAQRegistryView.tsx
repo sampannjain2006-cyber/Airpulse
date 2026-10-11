@@ -72,7 +72,7 @@ export const OpenAQRegistryView: React.FC<OpenAQRegistryViewProps> = ({
         <h1 className="page-heading">OpenAQ Monitoring Network Registry</h1>
         <p className="page-subheading">
           Explore registered ambient air quality monitoring stations across India from the global OpenAQ repository.
-          Registry entries show geographic coverage and sensor parameters; live measurements depend on ground ingestion.
+          Registry entries show geographic coverage and sensor parameters; live measurements depend on ground sensor synchronization.
         </p>
       </div>
 
@@ -85,9 +85,9 @@ export const OpenAQRegistryView: React.FC<OpenAQRegistryViewProps> = ({
             <span className="stat-desc">Total Indian sites indexed in OpenAQ</span>
           </div>
           <div className="stat-card">
-            <span className="stat-label">Dashboard Ingested</span>
+            <span className="stat-label">Stations Monitored</span>
             <span className="stat-val active">{coverage.dashboard_stations}</span>
-            <span className="stat-desc">Active in AirPulse telemetry database</span>
+            <span className="stat-desc">Active in AirPulse network</span>
           </div>
           <div className="stat-card">
             <span className="stat-label">Indian Cities</span>
@@ -97,7 +97,7 @@ export const OpenAQRegistryView: React.FC<OpenAQRegistryViewProps> = ({
           <div className="stat-card">
             <span className="stat-label">Data Freshness Window</span>
             <span className="stat-val">Last 48 Hours</span>
-            <span className="stat-desc">Active telemetry ingestion threshold</span>
+            <span className="stat-desc">Active reporting threshold</span>
           </div>
         </div>
       )}
@@ -202,7 +202,7 @@ export const OpenAQRegistryView: React.FC<OpenAQRegistryViewProps> = ({
                               <span key={param} className="param-chip">{param.toUpperCase()}</span>
                             ))
                           ) : (
-                            <span className="param-none">Telemetry pending</span>
+                            <span className="param-none">Readings pending</span>
                           )}
                         </div>
                       </td>

@@ -138,17 +138,17 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
                 }`}
               >
                 {isHistorical
-                  ? '🕒 HISTORICAL EVENT'
+                  ? '🕒 HISTORICAL RECORD'
                   : isForecast
-                  ? '⚡ 5-DAY ML FORECAST'
+                  ? '🔮 5-DAY FORECAST'
                   : isModelled
-                  ? '🌐 GOOGLE MODELLED'
-                  : '📡 OBSERVED GROUND DATA'}
+                  ? '🌐 AMBIENT ESTIMATE'
+                  : '● OBSERVED AIR QUALITY'}
               </span>
             </div>
-            <h2 className="rec-title">Context-Aware Precaution Recommendations</h2>
+            <h2 className="rec-title">Health Precautions &amp; Actions</h2>
             <p className="rec-subtitle">
-              Verified exposure-reduction guidance based on CPCB NAQI (2014) &amp; WHO Global Guidelines (2021)
+              Verified exposure-reduction guidance based on CPCB NAQI &amp; WHO health guidelines
             </p>
           </div>
 
@@ -219,7 +219,7 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
                     hour: '2-digit',
                     minute: '2-digit',
                   })
-                : 'Current Telemetry'}
+                : 'Current Readings'}
             </span>
           </div>
         </div>

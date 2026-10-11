@@ -242,12 +242,12 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
       <div className="monitoring-header-bar">
         <div className="header-bar-left">
           <div className="monitoring-tag-row">
-            <span className="nature-tag green">LIVE GROUND TELEMETRY</span>
+            <span className="nature-tag green">LIVE AIR QUALITY</span>
             <span className="nature-tag cyan">CPCB NAQI STANDARD</span>
           </div>
-          <h1 className="page-heading">Live Telemetry &amp; Station Network</h1>
+          <h1 className="page-heading">Live Monitoring &amp; Station Network</h1>
           <p className="page-subheading">
-            Authentic ground telemetry from official CPCB &amp; OpenAQ monitoring stations across India.
+            Ground-level air quality observations from official monitoring stations across India.
             Select a station from the map or list below to inspect live measurements and air quality meter.
           </p>
         </div>
@@ -255,8 +255,8 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
         {/* Global Summary Badge */}
         <div className="monitoring-stats-pill">
           <span className="pill-dot green" />
-          <span className="pill-primary">{stations.length} Stations Indexed</span>
-          <span className="pill-secondary">· {latestObs.filter((o) => o.pm25 !== null).length} Active Feeds</span>
+          <span className="pill-primary">{stations.length} Monitoring Stations</span>
+          <span className="pill-secondary">· {latestObs.filter((o) => o.pm25 !== null).length} Reporting Live</span>
         </div>
       </div>
 
@@ -374,7 +374,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
           <div className="map-wrapper-header">
             <div className="map-title-row">
               <span className="map-section-badge">INTERACTIVE MAP</span>
-              <h2 className="map-section-title">National Telemetry &amp; Spatial Distribution</h2>
+              <h2 className="map-section-title">National Air Quality Map</h2>
             </div>
             <div className="map-legend-pills">
               <span className="legend-chip"><span className="dot good" /> Good (&lt;30)</span>
@@ -382,7 +382,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
               <span className="legend-chip"><span className="dot moderate" /> Moderate (61–90)</span>
               <span className="legend-chip"><span className="dot poor" /> Poor (91–120)</span>
               <span className="legend-chip"><span className="dot severe" /> Very Poor / Severe (&gt;120)</span>
-              <span className="legend-chip"><span className="dot gray" /> Pending Telemetry</span>
+              <span className="legend-chip"><span className="dot gray" /> Awaiting Readings</span>
             </div>
           </div>
 
@@ -416,7 +416,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                     <span className="station-source-chip">{selectedStation.source_type.toUpperCase()}</span>
                     {hasSelectedReadings ? (
                       <span className={`live-telemetry-badge ${isDataStale ? 'stale' : 'live'}`}>
-                        {isDataStale ? '⚠️ Historical Telemetry' : '● Live Ingestion'}
+                        {isDataStale ? '⚠️ Recent Data' : '● Live Data Available'}
                       </span>
                     ) : (
                       <span className="live-telemetry-badge offline">○ Offline</span>
@@ -443,7 +443,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                           dataType: 'observed',
                         })
                       }
-                      title="View verified precaution recommendations based on this station's telemetry"
+                      title="View verified precaution recommendations based on this station's air quality readings"
                     >
                       🛡 Precautions ↗
                     </button>
@@ -503,7 +503,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                 <div className="inspector-pollutants-section">
                   <div className="pollutants-section-top">
                     <div className="pollutants-grid-title">
-                      Verified Sensor Telemetry ({activePollutants.length + activeWeather.length} Parameters Active):
+                      Monitored Air Quality Parameters ({activePollutants.length + activeWeather.length}):
                     </div>
                     <span className="pollutants-grid-hint">Click parameter for scientific CPCB threshold guide</span>
                   </div>
@@ -567,7 +567,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                           <span className="metric-cell-value">{formatValue(weather.val, '')}</span>
                           <span className="metric-cell-unit">{weather.unit}</span>
                         </div>
-                        <div className="metric-cell-subtext">Ambient Telemetry</div>
+                        <div className="metric-cell-subtext">Ambient Weather</div>
                       </div>
                     ))}
                   </div>
@@ -587,19 +587,19 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                               dateStyle: 'medium',
                               timeStyle: 'short',
                             })
-                          : 'Recorded Telemetry'}
+                          : 'Recorded Reading'}
                       </strong>
                     </div>
                     <span className="meta-sep">·</span>
                     <div className="meta-item">
-                      <span className="meta-label">Pipeline Ingestion:</span>
+                      <span className="meta-label">Updated:</span>
                       <strong className="meta-value">{formatRelativeTime(selectedObservation?.ingested_at)}</strong>
                     </div>
                     {isDataStale && (
                       <>
                         <span className="meta-sep">·</span>
                         <div className="meta-item stale-warning-pill">
-                          <span>⚠️ Stale Telemetry (&gt;24h ago)</span>
+                          <span>⚠️ Recorded &gt;24h ago</span>
                         </div>
                       </>
                     )}
@@ -610,7 +610,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                   <div className="no-data-icon">📡</div>
                   <h4>No current readings available for this station</h4>
                   <p>
-                    Ground observations are currently offline or pending ingestion from the provider for{' '}
+                    Ground observations are currently offline or pending sensor synchronization for{' '}
                     <strong>{selectedStation.name}</strong>.
                   </p>
                   <span className="honest-policy-badge">
@@ -626,7 +626,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                 <h4>No Station Selected</h4>
                 <p>
                   Click any station marker on the map above or choose from the 40 monitoring cards below to
-                  view live telemetry and inspect the CPCB air quality meter.
+                  view live air quality and inspect the CPCB air quality meter.
                 </p>
               </div>
             </div>
@@ -642,7 +642,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
               Monitoring Station Cards ({filteredStations.length} of {stations.length} Stations)
             </h2>
             <p className="cards-section-subtitle">
-              Interactive telemetry overview with real-time pollutant measurements and CPCB thresholds.
+              Interactive air quality overview with real-time pollutant measurements and CPCB thresholds.
             </p>
           </div>
 

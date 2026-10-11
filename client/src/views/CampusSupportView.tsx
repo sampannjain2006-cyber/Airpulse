@@ -372,7 +372,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
             {/* Role Switcher Bar to demonstrate Server-Side Authorization */}
             <div style={{ background: '#e8f5e9', padding: '6px 10px', borderRadius: '8px', border: '1px solid #b7e4c7' }}>
               <div style={{ fontSize: '11px', fontWeight: 700, color: '#2d6a4f', marginBottom: '4px' }}>
-                ACTIVE SIMULATED ROLE (ENFORCED ON BACKEND):
+                CURRENT USER ROLE:
               </div>
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                 {(['general_user', 'student', 'support_staff', 'campus_admin'] as CampusRole[]).map((r) => {
@@ -393,7 +393,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                       }}
-                      title={`Switch role to ${r} to test least-privilege backend access`}
+                      title={`View campus features as ${r.replace('_', ' ')}`}
                     >
                       {r === 'general_user' && '🌐 General'}
                       {r === 'student' && '🎓 Student'}
@@ -473,7 +473,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
       {activeTab === 'status' && (
         <div className="campus-tab-status">
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading campus environmental telemetry…</div>
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading campus environmental data…</div>
           ) : error ? (
             <div style={{ padding: '1.5rem', background: '#fee2e2', color: '#991b1b', borderRadius: '8px' }}>{error}</div>
           ) : envStatus ? (
@@ -483,7 +483,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: '#40916c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                      CAMPUS TELEMETRY
+                      CAMPUS AIR QUALITY
                     </span>
                     <h3 style={{ margin: '4px 0 0 0', fontSize: '18px', color: '#1b4332' }}>
                       {envStatus.campus.name}

@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { locationApi } from '../api/location';
-import type { LocationLookupResponse, GoogleStatusResponse } from '../types/location';
+import type { LocationLookupResponse } from '../types/location';
 import { SeverityMeter } from '../components/SeverityMeter';
 import { formatValue, formatRelativeTime } from '../utils/aqiUtils';
 import type { ContextualMeasurement } from '../types/pollutant';
@@ -33,7 +33,6 @@ export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [result, setResult] = useState<LocationLookupResponse | null>(null);
-  const [googleStatus, setGoogleStatus] = useState<GoogleStatusResponse | null>(null);
 
   // Quick preset locations in India
   const presets = [
@@ -44,13 +43,6 @@ export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
     { label: 'Chennai (Marina)', lat: '13.0500', lon: '80.2824' },
     { label: 'Hyderabad (Charminar)', lat: '17.3616', lon: '78.4747' },
   ];
-
-  useEffect(() => {
-    locationApi
-      .getGoogleStatus()
-      .then(setGoogleStatus)
-      .catch(() => {});
-  }, []);
 
   const validateCoordinates = (latStr: string, lonStr: string): { lat: number; lon: number } | null => {
     const lat = parseFloat(latStr.trim());
@@ -139,15 +131,13 @@ export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
       {/* Header Banner */}
       <div className="view-header-banner">
         <div className="header-meta-row">
-          <span className="nature-tag green">POSTGIS SPATIAL RESOLUTION</span>
-          <span className={`nature-tag ${googleStatus?.configured ? 'cyan' : 'amber'}`}>
-            GOOGLE FALLBACK: {googleStatus?.configured ? 'ONLINE' : 'UNCONFIGURED (SAFE FALLBACK)'}
-          </span>
+          <span className="nature-tag green">LOCATION RESOLUTION</span>
+          <span className="nature-tag cyan">AMBIENT AIR QUALITY MAPPING</span>
         </div>
         <h1 className="page-heading">Geographic Coordinates &amp; Proximity Lookup</h1>
         <p className="page-subheading">
           Query any exact latitude and longitude or Indian address to locate the closest official OpenAQ/CPCB
-          monitoring station via PostGIS ST_Distance, or inspect modeled ambient fallback.
+          monitoring stations nearest to your location, or inspect modeled ambient air quality.
         </p>
       </div>
 
@@ -275,7 +265,7 @@ export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
 
             <div className="nature-form-group slider-group">
               <div className="slider-label-row">
-                <label htmlFor="geo-freshness-slider" className="nature-form-label">Telemetry Freshness Window</label>
+                <label htmlFor="geo-freshness-slider" className="nature-form-label">Recent Readings Window</label>
                 <span className="slider-value-display">{freshnessHours} hrs</span>
               </div>
               <input
@@ -307,7 +297,7 @@ export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
             {loading ? (
               <>
                 <span className="btn-spinner" />
-                <span>Querying PostGIS Spatial Index…</span>
+                <span>Searching nearby stations…</span>
               </>
             ) : (
               <>
@@ -439,7 +429,7 @@ export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
               {result.nearby_openaq_reference && result.nearby_openaq_reference.length > 0 && (
                 <div className="nearby-stations-section">
                   <div className="nearby-section-header">
-                    <span className="nearby-badge">POSTGIS PROXIMITY</span>
+                    <span className="nearby-badge">NEARBY STATIONS</span>
                     <h4 className="nearby-title">
                       Nearby Stations Indexed ({result.nearby_openaq_reference.length} stations within {radiusKm} km)
                     </h4>
@@ -450,7 +440,7 @@ export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
                         <tr>
                           <th>Station</th>
                           <th>Distance</th>
-                          <th>Latest Telemetry</th>
+                          <th>Latest Reading</th>
                           <th>Action</th>
                         </tr>
                       </thead>
@@ -496,7 +486,7 @@ export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
               <h3>Spatial Intelligence Ready</h3>
               <p>
                 Enter coordinates or an Indian city address on the left and click "Perform Proximity Lookup"
-                to calculate spatial distance and telemetry freshness.
+                to calculate spatial distance and reading freshness.
               </p>
             </div>
           )}

@@ -54,8 +54,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             Empowering Clean Air Decisions Across India
           </h1>
           <p className="hero-description">
-            AirPulse tracks authentic ambient air telemetry, detects spatial pollution hotspots via PostGIS,
-            and serves short-term statistical forecasts using trained multi-model ensembles.
+            AirPulse tracks authentic ambient air quality across India, detects regional pollution hotspots,
+            and provides 5-day predictive forecasts based on verified ground data.
             No fabricated data. Powered by CPCB standards and OpenAQ ground sensors.
           </p>
 
@@ -86,33 +86,33 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <span className="metric-main-value">{stations.length}</span>
               <span className="metric-badge success">{activeObsCount} Active</span>
             </div>
-            <p className="metric-hint">Official CPCB & OpenAQ telemetry stations across India</p>
+            <p className="metric-hint">Official monitoring stations reporting across India</p>
           </div>
 
           <div className="metric-card" onClick={() => onNavigate('hotspots')} role="button" tabIndex={0}>
             <div className="metric-card-header">
-              <span className="metric-label">DBSCAN Hotspots</span>
+              <span className="metric-label">Pollution Hotspots</span>
               <span className="metric-icon">🔥</span>
             </div>
             <div className="metric-value-row">
               <span className="metric-main-value">{hotspots.length}</span>
               <span className="metric-badge warning">Spatial Clusters</span>
             </div>
-            <p className="metric-hint">Clusters detected using PostGIS ST_ClusterDBSCAN (ε=40km)</p>
+            <p className="metric-hint">Regional clusters detected within 40 km radius</p>
           </div>
 
           <div className="metric-card" onClick={() => onNavigate('forecast')} role="button" tabIndex={0}>
             <div className="metric-card-header">
-              <span className="metric-label">ML Forecasting</span>
+              <span className="metric-label">5-Day Forecasts</span>
               <span className="metric-icon">🔮</span>
             </div>
             <div className="metric-value-row">
               <span className="metric-main-value">
                 {predictionSummary ? `${predictionSummary.stations_with_forecast}/${predictionSummary.total_stations}` : '5-Day'}
               </span>
-              <span className="metric-badge info">Weighted Ensemble</span>
+              <span className="metric-badge info">High Confidence</span>
             </div>
-            <p className="metric-hint">Trained XGBoost, Random Forest & HistGradientBoosting models</p>
+            <p className="metric-hint">Short-term PM2.5 forecasting based on historical trends</p>
           </div>
 
           <div className="metric-card" onClick={() => onOpenPollutantInfo('pm25')} role="button" tabIndex={0}>
@@ -169,7 +169,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               <span className="legend-dot poor" /> Poor / Severe (&gt;90 µg/m³)
             </span>
             <span className="footer-legend-item">
-              <span className="legend-dot inactive" /> Telemetry Idle
+              <span className="legend-dot inactive" /> No Active Readings
             </span>
           </div>
         </div>
@@ -234,7 +234,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 })
               ) : (
                 <div className="empty-feed-notice">
-                  <p>Telemetry sync in progress.</p>
+                  <p>Data sync in progress.</p>
                   <span className="empty-feed-hint">Stations are currently refreshing from OpenAQ.</span>
                 </div>
               )}
@@ -272,7 +272,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         <div className="overview-features-grid">
           <div className="feature-nav-card" onClick={() => onNavigate('live')} role="button" tabIndex={0}>
             <div className="feature-card-icon">📍</div>
-            <h3 className="feature-card-title">Live Monitoring & Telemetry</h3>
+            <h3 className="feature-card-title">Live Monitoring & Network</h3>
             <p className="feature-card-desc">
               Inspect interactive Leaflet maps with synchronized station popups, real ground observations, and CPCB NAQI severity ratings.
             </p>
@@ -299,7 +299,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
           <div className="feature-nav-card" onClick={() => onNavigate('hotspots')} role="button" tabIndex={0}>
             <div className="feature-card-icon">🔥</div>
-            <h3 className="feature-card-title">PostGIS DBSCAN Hotspots</h3>
+            <h3 className="feature-card-title">Regional Hotspots</h3>
             <p className="feature-card-desc">
               Automated spatial density clustering identifying contiguous regional pollution pockets across Indian municipal boundaries.
             </p>
@@ -334,7 +334,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             <h4 className="attribution-title">Honest Data & Scientific Integrity Policy</h4>
             <p className="attribution-desc">
               AirPulse guarantees that all environmental measurements displayed are derived strictly from authentic
-              CPCB and OpenAQ telemetry. In areas or periods where ground measurements are unavailable, AirPulse
+              CPCB and OpenAQ air quality readings. In areas or periods where ground measurements are unavailable, AirPulse
               honestly displays missing data rather than fabricating synthetic or misleading values.
             </p>
           </div>

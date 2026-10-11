@@ -205,7 +205,7 @@ export const SeverityMeter: React.FC<SeverityMeterProps> = ({
           </span>
         ) : (
           <span>
-            Provider: <strong>{source}</strong> · {recordedAt ? `Observed: ${new Date(recordedAt).toLocaleString('en-IN')}` : 'Ground Telemetry'}
+            Provider: <strong>{source}</strong> · {recordedAt ? `Observed: ${new Date(recordedAt).toLocaleString('en-IN')}` : 'Ground Reading'}
           </span>
         )}
       </div>
