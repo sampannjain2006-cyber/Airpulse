@@ -1,29 +1,29 @@
 /**
  * AIRPULSE — Google Services Integration Modal (Feature 15)
- * Provides Google Maps Navigation, Google Calendar Event Drafts, Google Tasks/Reminders,
+ * Provides Google Calendar Event Drafts, Google Tasks/Reminders,
  * and Google Cloud / OAuth account management with strict data minimization.
+ * (Google Maps navigation removed per requirements)
  */
 
 import React, { useState, useEffect, useId } from 'react';
 import type { GoogleContextPayload, GoogleIntegrationStatusResponse } from '../types/google';
 import { googleApi } from '../api/google';
 
+export type GoogleModalTab = 'calendar' | 'tasks' | 'account';
+
 interface GoogleServicesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  initialTab?: 'maps' | 'calendar' | 'tasks' | 'account';
+  initialTab?: GoogleModalTab;
   context?: GoogleContextPayload | null;
 }
 
 export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
   isOpen,
   onClose,
-  initialTab = 'maps',
+  initialTab = 'calendar',
   context,
 }) => {
-  const originInputId = useId();
-  const destInputId = useId();
-  const travelModeId = useId();
   const eventTypeId = useId();
   const eventTitleId = useId();
   const eventLocationId = useId();
@@ -36,19 +36,11 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
   const taskDestId = useId();
   const taskDueDateId = useId();
 
-  const [activeTab, setActiveTab] = useState<'maps' | 'calendar' | 'tasks' | 'account'>(initialTab);
+  const [activeTab, setActiveTab] = useState<GoogleModalTab>(initialTab);
   const [status, setStatus] = useState<GoogleIntegrationStatusResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState<{ text: string; type: 'success' | 'info' | 'error' } | null>(null);
-
-  // Maps state
-  const [mapsOrigin, setMapsOrigin] = useState<string>('');
-  const [mapsDestination, setMapsDestination] = useState<string>('');
-  const [mapsTravelMode, setMapsTravelMode] = useState<string>('walking');
-  const [mapsUrl, setMapsUrl] = useState<string>('');
-  const [mapsLimitation, setMapsLimitation] = useState<string>('');
-  const [generatingMaps, setGeneratingMaps] = useState<boolean>(false);
 
   // Calendar state
   const [calEventType, setCalEventType] = useState<string>('destination_visit');
@@ -73,6 +65,17 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
   const [taskWebUrl, setTaskWebUrl] = useState<string>('https://tasks.google.com/');
   const [generatingTask, setGeneratingTask] = useState<boolean>(false);
 
+  // Close on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   // Sync tab with initialTab prop when reopened
   useEffect(() => {
     if (isOpen) {
@@ -85,23 +88,15 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
     if (!isOpen) return;
 
     if (context) {
-      if (context.origin) setMapsOrigin(context.origin);
       if (context.destination) {
-        setMapsDestination(context.destination);
         setCalDestination(context.destination);
         setTaskDestination(context.destination);
       } else if (context.destinationName) {
-        setMapsDestination(context.destinationName);
         setCalDestination(context.destinationName);
         setTaskDestination(context.destinationName);
       } else if (context.campusName) {
-        setMapsDestination(context.campusName);
         setCalDestination(context.campusName);
         setTaskDestination(context.campusName);
-      }
-
-      if (context.travelMode) {
-        setMapsTravelMode(context.travelMode);
       }
 
       if (context.plannedDate) {
@@ -143,32 +138,6 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
       mounted = false;
     };
   }, [isOpen]);
-
-  // Generate Maps link whenever maps inputs change
-  useEffect(() => {
-    if (!isOpen || activeTab !== 'maps') return;
-
-    if (!mapsDestination.trim()) {
-      setMapsUrl('');
-      return;
-    }
-
-    setGeneratingMaps(true);
-    googleApi
-      .getMapsUrl({
-        origin: mapsOrigin.trim() || undefined,
-        destination: mapsDestination.trim(),
-        travelMode: mapsTravelMode,
-      })
-      .then((res) => {
-        setMapsUrl(res.url);
-        setMapsLimitation(res.limitation_notice);
-        setGeneratingMaps(false);
-      })
-      .catch(() => {
-        setGeneratingMaps(false);
-      });
-  }, [isOpen, activeTab, mapsOrigin, mapsDestination, mapsTravelMode]);
 
   // Generate Calendar draft whenever calendar inputs change
   useEffect(() => {
@@ -274,71 +243,32 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
-    <div className="nature-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="google-modal-title">
+    return (
+    <div className="nature-modal-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="google-modal-title">
       <div
-        className="nature-modal"
-        style={{
-          maxWidth: '900px',
-          width: '95%',
-          maxHeight: '90vh',
-          display: 'flex',
-          flexDirection: 'column',
-          background: '#0d1f18',
-          border: '1px solid rgba(116, 198, 157, 0.3)',
-          boxShadow: '0 20px 40px rgba(0,0,0,0.6)',
-          borderRadius: '12px',
-          overflow: 'hidden',
-          color: '#e2e8f0',
-        }}
+        className="nature-modal google-modal-dialog"
+        onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div
-          style={{
-            padding: '1.2rem 1.5rem',
-            background: 'linear-gradient(135deg, #1b4332 0%, #081c15 100%)',
-            borderBottom: '1px solid rgba(116, 198, 157, 0.2)',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '12px',
-          }}
-        >
+        <div className="nature-modal-header google-modal-header">
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div className="google-modal-title-row">
               <span style={{ fontSize: '24px' }}>🌐</span>
-              <h2 id="google-modal-title" style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: '#d8f3dc' }}>
+              <h2 id="google-modal-title" className="google-modal-title">
                 Google Services Integration
               </h2>
-              <span
-                style={{
-                  fontSize: '11px',
-                  background: '#2d6a4f',
-                  color: '#d8f3dc',
-                  padding: '2px 8px',
-                  borderRadius: '12px',
-                  fontWeight: 600,
-                }}
-              >
+              <span className="google-modal-badge">
                 No Account Needed for Handoffs
               </span>
             </div>
-            <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#95d5b2' }}>
-              Maps navigation, Google Calendar drafts, and Tasks checklists with transparent data provenance.
+            <p className="google-modal-subtitle">
+              Google Calendar event drafts, Tasks checklists, and cloud configuration with transparent data provenance.
             </p>
           </div>
 
           <button
             onClick={onClose}
-            style={{
-              background: 'transparent',
-              border: 'none',
-              color: '#d8f3dc',
-              fontSize: '20px',
-              cursor: 'pointer',
-              padding: '4px 8px',
-            }}
+            className="google-modal-close-btn"
             aria-label="Close Google integration modal"
           >
             ✕
@@ -346,95 +276,28 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
         </div>
 
         {/* Tab Navigation */}
-        <div
-          style={{
-            display: 'flex',
-            borderBottom: '1px solid rgba(116, 198, 157, 0.2)',
-            background: '#0a1a14',
-            overflowX: 'auto',
-          }}
-        >
+        <div className="google-modal-tabs-bar" role="tablist" aria-label="Google Services Options">
           <button
-            onClick={() => setActiveTab('maps')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              background: activeTab === 'maps' ? '#1b4332' : 'transparent',
-              color: activeTab === 'maps' ? '#ffffff' : '#95d5b2',
-              border: 'none',
-              borderBottom: activeTab === 'maps' ? '3px solid #52b788' : 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            <span>🗺️</span> Google Maps
-          </button>
-          <button
+            role="tab"
+            aria-selected={activeTab === 'calendar'}
             onClick={() => setActiveTab('calendar')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              background: activeTab === 'calendar' ? '#1b4332' : 'transparent',
-              color: activeTab === 'calendar' ? '#ffffff' : '#95d5b2',
-              border: 'none',
-              borderBottom: activeTab === 'calendar' ? '3px solid #52b788' : 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              whiteSpace: 'nowrap',
-            }}
+            className={`google-tab-btn ${activeTab === 'calendar' ? 'active' : ''}`}
           >
             <span>📅</span> Calendar Events
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'tasks'}
             onClick={() => setActiveTab('tasks')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              background: activeTab === 'tasks' ? '#1b4332' : 'transparent',
-              color: activeTab === 'tasks' ? '#ffffff' : '#95d5b2',
-              border: 'none',
-              borderBottom: activeTab === 'tasks' ? '3px solid #52b788' : 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              whiteSpace: 'nowrap',
-            }}
+            className={`google-tab-btn ${activeTab === 'tasks' ? 'active' : ''}`}
           >
             <span>✅</span> Tasks &amp; Reminders
           </button>
           <button
+            role="tab"
+            aria-selected={activeTab === 'account'}
             onClick={() => setActiveTab('account')}
-            style={{
-              flex: 1,
-              padding: '12px',
-              background: activeTab === 'account' ? '#1b4332' : 'transparent',
-              color: activeTab === 'account' ? '#ffffff' : '#95d5b2',
-              border: 'none',
-              borderBottom: activeTab === 'account' ? '3px solid #52b788' : 'none',
-              cursor: 'pointer',
-              fontWeight: 600,
-              fontSize: '13px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '6px',
-              whiteSpace: 'nowrap',
-            }}
+            className={`google-tab-btn ${activeTab === 'account' ? 'active' : ''}`}
           >
             <span>⚙️</span> Cloud &amp; Status
           </button>
@@ -445,11 +308,12 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
           <div
             style={{
               padding: '8px 16px',
-              background: feedbackMsg.type === 'success' ? '#14532d' : feedbackMsg.type === 'error' ? '#7f1d1d' : '#1e3a8a',
-              color: '#ffffff',
+              background: feedbackMsg.type === 'success' ? 'var(--color-sage-subtle)' : feedbackMsg.type === 'error' ? 'var(--color-rose-subtle)' : 'var(--color-sky-subtle)',
+              color: feedbackMsg.type === 'success' ? 'var(--color-forest-dark)' : feedbackMsg.type === 'error' ? 'var(--color-rose)' : 'var(--color-sky)',
+              borderBottom: '1px solid var(--color-border)',
               fontSize: '12px',
               textAlign: 'center',
-              fontWeight: 500,
+              fontWeight: 600,
             }}
           >
             {feedbackMsg.text}
@@ -457,232 +321,52 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
         )}
 
         {/* Body Content */}
-        <div style={{ padding: '1.5rem', overflowY: 'auto', flex: 1 }}>
+        <div className="google-modal-body">
           {loading && !status && (
-            <div style={{ textAlign: 'center', padding: '2rem', color: '#95d5b2' }}>
+            <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--color-text-muted)' }}>
               Checking Google service configurations…
             </div>
           )}
 
           {error && (
-            <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', padding: '10px', borderRadius: '6px', color: '#fca5a5', marginBottom: '1rem', fontSize: '13px' }}>
+            <div style={{ background: 'var(--color-rose-subtle)', border: '1px solid var(--color-rose)', padding: '10px 14px', borderRadius: 'var(--radius-sm)', color: 'var(--color-rose)', fontSize: '13px' }}>
               ⚠️ {error}
             </div>
           )}
 
-          {/* TAB 1: GOOGLE MAPS & NAVIGATION */}
-          {activeTab === 'maps' && (
-            <div className="google-tab-maps">
-              <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', color: '#d8f3dc' }}>
-                  Open Route or Destination in Google Maps
+          {/* TAB 1: GOOGLE CALENDAR */}
+          {activeTab === 'calendar' && (
+            <div className="google-tab-calendar">
+              <div style={{ marginBottom: '1.2rem' }}>
+                <h3 className="google-tab-heading">
+                  Add Environmental Check to Google Calendar
                 </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#95d5b2' }}>
-                  Direct official Google Maps navigation handoff supporting Walking and Bicycling priority routes.
+                <p className="google-tab-subtext">
+                  Draft an air-quality consultation, journey check, or outdoor advisory event. Opens directly in Google Calendar or downloads an .ics file.
                 </p>
               </div>
 
               {/* Form Controls */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label htmlFor={originInputId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
-                    Origin (Optional for directions):
-                  </label>
-                  <input
-                    id={originInputId}
-                    type="text"
-                    value={mapsOrigin}
-                    onChange={(e) => setMapsOrigin(e.target.value)}
-                    placeholder="e.g. Connaught Place, New Delhi"
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-
-                <div>
-                  <label htmlFor={destInputId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
-                    Destination (Required):
-                  </label>
-                  <input
-                    id={destInputId}
-                    type="text"
-                    value={mapsDestination}
-                    onChange={(e) => setMapsDestination(e.target.value)}
-                    placeholder="e.g. India Gate, New Delhi"
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '1.2rem' }}>
-                <label htmlFor={travelModeId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
-                  Travel Mode for Google Maps Navigation:
-                </label>
-                <select
-                  id={travelModeId}
-                  value={mapsTravelMode}
-                  onChange={(e) => setMapsTravelMode(e.target.value)}
-                  style={{
-                    padding: '8px 12px',
-                    background: '#081c15',
-                    border: '1px solid #2d6a4f',
-                    borderRadius: '6px',
-                    color: '#ffffff',
-                    fontSize: '13px',
-                    minWidth: '200px',
-                  }}
-                >
-                  <option value="walking">🚶 Walking (Pedestrian Navigation)</option>
-                  <option value="cycling">🚴 Bicycling (Cycling Navigation)</option>
-                  <option value="transit">🚆 Transit (Bus / Metro)</option>
-                  <option value="driving">🚗 Driving (Road Network)</option>
-                </select>
-              </div>
-
-              {/* Statutory Limitation Callout */}
-              <div
-                style={{
-                  background: 'rgba(245, 158, 11, 0.1)',
-                  border: '1px solid rgba(245, 158, 11, 0.3)',
-                  padding: '12px',
-                  borderRadius: '8px',
-                  fontSize: '12px',
-                  color: '#fde68a',
-                  lineHeight: 1.5,
-                  marginBottom: '1.5rem',
-                }}
-              >
-                <strong>⚠️ IMPORTANT LIMITATION:</strong>{' '}
-                {mapsLimitation ||
-                  'Opening a route in Google Maps uses Google standard road routing. It does NOT automatically carry AIRPULSE real-time pollution exposure scores or guarantee that Google Maps will follow the least-polluted route.'}
-                <div style={{ marginTop: '6px', fontSize: '11px', color: '#cbd5e1' }}>
-                  AIRPULSE preserves your pollution-optimized route comparison within this application.
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                {mapsUrl ? (
-                  <a
-                    href={mapsUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      background: '#2d6a4f',
-                      color: '#ffffff',
-                      textDecoration: 'none',
-                      padding: '10px 18px',
-                      borderRadius: '6px',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
-                  >
-                    <span>🗺️</span> Open in Google Maps ↗
-                  </a>
-                ) : (
-                  <button
-                    disabled
-                    style={{
-                      background: '#1b4332',
-                      color: '#6b7280',
-                      border: 'none',
-                      padding: '10px 18px',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      cursor: 'not-allowed',
-                    }}
-                  >
-                    Enter Destination to Generate Map Link
-                  </button>
-                )}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (mapsUrl) {
-                      navigator.clipboard.writeText(mapsUrl);
-                      showNotification('Google Maps URL copied to clipboard!', 'success');
-                    }
-                  }}
-                  disabled={!mapsUrl || generatingMaps}
-                  style={{
-                    background: '#081c15',
-                    color: '#95d5b2',
-                    border: '1px solid #2d6a4f',
-                    padding: '10px 16px',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    cursor: mapsUrl ? 'pointer' : 'not-allowed',
-                  }}
-                >
-                  📋 Copy Navigation Link
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* TAB 2: GOOGLE CALENDAR */}
-          {activeTab === 'calendar' && (
-            <div className="google-tab-calendar">
-              <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', color: '#d8f3dc' }}>
-                  Add Environmental Check to Google Calendar
-                </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#95d5b2' }}>
-                  Creates a prefilled Google Calendar draft without requiring OAuth account access. No sensitive health information is included.
-                </p>
-              </div>
-
-              {/* Event Form */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label htmlFor={eventTypeId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
-                    Event Purpose:
+              <div className="google-form-grid-2" style={{ marginBottom: '1rem' }}>
+                <div className="google-form-group">
+                  <label htmlFor={eventTypeId} className="google-form-label">
+                    Event Category:
                   </label>
                   <select
                     id={eventTypeId}
                     value={calEventType}
                     onChange={(e) => setCalEventType(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
+                    className="google-form-control"
                   >
-                    <option value="destination_visit">Planned Destination Visit &amp; AQI Check</option>
-                    <option value="pollution_check_reminder">Pre-Departure Air Quality Review</option>
-                    <option value="forecast_review">Review 5-Day Forecast Horizon</option>
-                    <option value="campus_advisory">Campus Environmental Advisory Action</option>
+                    <option value="destination_visit">Destination Visit &amp; Outdoor Journey</option>
+                    <option value="campus_advisory">Campus Environmental Advisory</option>
+                    <option value="forecast_review">Review 5-Day Pollution Forecast</option>
+                    <option value="health_check">Health &amp; Vulnerable Individual Precaution</option>
                   </select>
                 </div>
 
-                <div>
-                  <label htmlFor={eventTitleId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
+                <div className="google-form-group">
+                  <label htmlFor={eventTitleId} className="google-form-label">
                     Event Title:
                   </label>
                   <input
@@ -690,112 +374,70 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                     type="text"
                     value={calTitle}
                     onChange={(e) => setCalTitle(e.target.value)}
-                    placeholder="e.g. AIRPULSE: Check Air Quality"
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
+                    placeholder="e.g. AIRPULSE: Travel to Central Delhi"
+                    className="google-form-control"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label htmlFor={eventLocationId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
-                    Destination / Campus:
+              <div className="google-form-grid-4" style={{ marginBottom: '1rem' }}>
+                <div className="google-form-group">
+                  <label htmlFor={eventLocationId} className="google-form-label">
+                    Location:
                   </label>
                   <input
                     id={eventLocationId}
                     type="text"
                     value={calDestination}
                     onChange={(e) => setCalDestination(e.target.value)}
-                    placeholder="e.g. Lodhi Garden, New Delhi"
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
+                    placeholder="e.g. Connaught Place, New Delhi"
+                    className="google-form-control"
                   />
                 </div>
 
-                <div>
-                  <label htmlFor={eventDateId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
-                    Target Date:
+                <div className="google-form-group">
+                  <label htmlFor={eventDateId} className="google-form-label">
+                    Date:
                   </label>
                   <input
                     id={eventDateId}
                     type="date"
                     value={calPlannedDate}
                     onChange={(e) => setCalPlannedDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
+                    className="google-form-control"
                   />
                 </div>
 
-                <div>
-                  <label htmlFor={eventStartTimeId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
-                    Time Window:
+                <div className="google-form-group">
+                  <label htmlFor={eventStartTimeId} className="google-form-label">
+                    Start Time:
                   </label>
-                  <div style={{ display: 'flex', gap: '4px' }}>
-                    <input
-                      id={eventStartTimeId}
-                      type="time"
-                      value={calStartTime}
-                      onChange={(e) => setCalStartTime(e.target.value)}
-                      style={{
-                        width: '50%',
-                        padding: '8px 4px',
-                        background: '#081c15',
-                        border: '1px solid #2d6a4f',
-                        borderRadius: '6px',
-                        color: '#ffffff',
-                        fontSize: '12px',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                    <input
-                      id={eventEndTimeId}
-                      aria-label="Event End Time"
-                      type="time"
-                      value={calEndTime}
-                      onChange={(e) => setCalEndTime(e.target.value)}
-                      style={{
-                        width: '50%',
-                        padding: '8px 4px',
-                        background: '#081c15',
-                        border: '1px solid #2d6a4f',
-                        borderRadius: '6px',
-                        color: '#ffffff',
-                        fontSize: '12px',
-                        boxSizing: 'border-box',
-                      }}
-                    />
-                  </div>
+                  <input
+                    id={eventStartTimeId}
+                    type="time"
+                    value={calStartTime}
+                    onChange={(e) => setCalStartTime(e.target.value)}
+                    className="google-form-control"
+                  />
+                </div>
+
+                <div className="google-form-group">
+                  <label htmlFor={eventEndTimeId} className="google-form-label">
+                    End Time:
+                  </label>
+                  <input
+                    id={eventEndTimeId}
+                    type="time"
+                    value={calEndTime}
+                    onChange={(e) => setCalEndTime(e.target.value)}
+                    className="google-form-control"
+                  />
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1.2rem' }}>
-                <label htmlFor={eventNotesId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
-                  Precaution Guidance / Notes (Auto-sanitized):
+              <div className="google-form-group" style={{ marginBottom: '1.2rem' }}>
+                <label htmlFor={eventNotesId} className="google-form-label">
+                  Advisory Notes &amp; Protective Precautions:
                 </label>
                 <textarea
                   id={eventNotesId}
@@ -803,34 +445,13 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                   value={calNotes}
                   onChange={(e) => setCalNotes(e.target.value)}
                   placeholder="e.g. Wear certified N95 respirator during outdoor travel if PM2.5 exceeds 90 µg/m³."
-                  style={{
-                    width: '100%',
-                    padding: '8px 10px',
-                    background: '#081c15',
-                    border: '1px solid #2d6a4f',
-                    borderRadius: '6px',
-                    color: '#ffffff',
-                    fontSize: '12px',
-                    boxSizing: 'border-box',
-                    resize: 'vertical',
-                  }}
+                  className="google-form-control"
+                  style={{ resize: 'vertical' }}
                 />
               </div>
 
               {/* Data Provenance Badge */}
-              <div
-                style={{
-                  background: '#081c15',
-                  padding: '10px 12px',
-                  borderRadius: '6px',
-                  border: '1px solid #2d6a4f',
-                  marginBottom: '1.2rem',
-                  fontSize: '12px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                }}
-              >
+              <div className="google-provenance-box" style={{ marginBottom: '1.2rem' }}>
                 <span>ℹ️</span>
                 <span>
                   <strong>Data Provenance:</strong>{' '}
@@ -847,18 +468,7 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                     href={calUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      background: '#2d6a4f',
-                      color: '#ffffff',
-                      textDecoration: 'none',
-                      padding: '10px 18px',
-                      borderRadius: '6px',
-                      fontWeight: 700,
-                      fontSize: '13px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                    }}
+                    className="google-btn-primary"
                   >
                     <span>📅</span> Open Prefilled Google Calendar Draft ↗
                   </a>
@@ -868,60 +478,40 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                   type="button"
                   onClick={handleDownloadIcs}
                   disabled={!calIcsContent || generatingCal}
-                  style={{
-                    background: '#081c15',
-                    color: '#95d5b2',
-                    border: '1px solid #2d6a4f',
-                    padding: '10px 16px',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    cursor: calIcsContent ? 'pointer' : 'not-allowed',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
+                  className="google-btn-secondary"
                 >
                   <span>📥</span> Download .ics File (Apple / Outlook / Google)
                 </button>
               </div>
 
-              <div style={{ marginTop: '10px', fontSize: '11px', color: '#94a3b8' }}>
+              <div className="google-note-text">
                 Note: Action opens a draft for your review. The event is not added until you click &quot;Save&quot; in Google Calendar.
               </div>
             </div>
           )}
 
-          {/* TAB 3: GOOGLE TASKS & REMINDERS */}
+          {/* TAB 2: GOOGLE TASKS & REMINDERS */}
           {activeTab === 'tasks' && (
             <div className="google-tab-tasks">
-              <div style={{ marginBottom: '1rem' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', color: '#d8f3dc' }}>
+              <div style={{ marginBottom: '1.2rem' }}>
+                <h3 className="google-tab-heading">
                   Create Pollution-Aware Tasks &amp; Reminders
                 </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#95d5b2' }}>
+                <p className="google-tab-subtext">
                   Structured actionable checklists for checking air quality, reviewing forecasts, or preparing certified PPE.
                 </p>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label htmlFor={taskPresetId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
+              <div className="google-form-grid-2" style={{ marginBottom: '1rem' }}>
+                <div className="google-form-group">
+                  <label htmlFor={taskPresetId} className="google-form-label">
                     Task Template:
                   </label>
                   <select
                     id={taskPresetId}
                     value={taskType}
                     onChange={(e) => setTaskType(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
+                    className="google-form-control"
                   >
                     <option value="check_destination_pollution">Check Destination Pollution Before Departure</option>
                     <option value="review_forecast">Review 5-Day Forecast Before Future Trip</option>
@@ -930,8 +520,8 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                   </select>
                 </div>
 
-                <div>
-                  <label htmlFor={taskTitleId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
+                <div className="google-form-group">
+                  <label htmlFor={taskTitleId} className="google-form-label">
                     Task Title:
                   </label>
                   <input
@@ -940,23 +530,14 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                     value={taskTitle}
                     onChange={(e) => setTaskTitle(e.target.value)}
                     placeholder="e.g. Check AQI and pack N95 respirator"
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
+                    className="google-form-control"
                   />
                 </div>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-                <div>
-                  <label htmlFor={taskDestId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '14px', marginBottom: '1rem' }}>
+                <div className="google-form-group">
+                  <label htmlFor={taskDestId} className="google-form-label">
                     Destination / Area:
                   </label>
                   <input
@@ -965,21 +546,12 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                     value={taskDestination}
                     onChange={(e) => setTaskDestination(e.target.value)}
                     placeholder="e.g. Anand Vihar, Delhi"
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
+                    className="google-form-control"
                   />
                 </div>
 
-                <div>
-                  <label htmlFor={taskDueDateId} style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#74c69d', marginBottom: '4px' }}>
+                <div className="google-form-group">
+                  <label htmlFor={taskDueDateId} className="google-form-label">
                     Due Date (Optional):
                   </label>
                   <input
@@ -987,35 +559,18 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                     type="date"
                     value={taskDueDate}
                     onChange={(e) => setTaskDueDate(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '8px 10px',
-                      background: '#081c15',
-                      border: '1px solid #2d6a4f',
-                      borderRadius: '6px',
-                      color: '#ffffff',
-                      fontSize: '13px',
-                      boxSizing: 'border-box',
-                    }}
+                    className="google-form-control"
                   />
                 </div>
               </div>
 
               {/* Checklist Preview Box */}
-              <div
-                style={{
-                  background: '#081c15',
-                  padding: '12px 14px',
-                  borderRadius: '8px',
-                  border: '1px solid #2d6a4f',
-                  marginBottom: '1.2rem',
-                }}
-              >
-                <div style={{ fontSize: '12px', fontWeight: 700, color: '#74c69d', marginBottom: '8px' }}>
+              <div className="google-checklist-box" style={{ marginBottom: '1.2rem' }}>
+                <div className="google-checklist-title">
                   ACTION CHECKLIST PREVIEW:
                 </div>
                 {taskChecklist.map((item, idx) => (
-                  <div key={idx} style={{ fontSize: '12px', color: '#cbd5e1', marginBottom: '4px', display: 'flex', gap: '6px' }}>
+                  <div key={idx} className="google-checklist-item">
                     <span>{item}</span>
                   </div>
                 ))}
@@ -1027,19 +582,7 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                   type="button"
                   onClick={handleCopyTask}
                   disabled={!taskCopyableText || generatingTask}
-                  style={{
-                    background: '#2d6a4f',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '10px 18px',
-                    borderRadius: '6px',
-                    fontWeight: 700,
-                    fontSize: '13px',
-                    cursor: 'pointer',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
+                  className="google-btn-primary"
                 >
                   <span>📋</span> Copy Task Checklist to Clipboard
                 </button>
@@ -1048,18 +591,7 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                   href={taskWebUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  style={{
-                    background: '#081c15',
-                    color: '#95d5b2',
-                    textDecoration: 'none',
-                    border: '1px solid #2d6a4f',
-                    padding: '10px 16px',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '6px',
-                  }}
+                  className="google-btn-secondary"
                 >
                   <span>⚡</span> Open Google Tasks Web App ↗
                 </a>
@@ -1069,68 +601,47 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                     href={taskCalReminderUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    style={{
-                      background: '#081c15',
-                      color: '#95d5b2',
-                      textDecoration: 'none',
-                      border: '1px solid #2d6a4f',
-                      padding: '10px 16px',
-                      borderRadius: '6px',
-                      fontSize: '13px',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px',
-                    }}
+                    className="google-btn-secondary"
                   >
                     <span>⏰</span> Open in Calendar as Reminder ↗
                   </a>
                 )}
               </div>
 
-              <div style={{ marginTop: '10px', fontSize: '11px', color: '#94a3b8' }}>
+              <div className="google-note-text">
                 Note: Copying or opening drafts does not silently create tasks in Google Cloud. Direct API task creation is available when a Google Account is connected.
               </div>
             </div>
           )}
 
-          {/* TAB 4: GOOGLE CLOUD & ACCOUNT STATUS */}
+          {/* TAB 3: GOOGLE CLOUD & ACCOUNT STATUS */}
           {activeTab === 'account' && (
             <div className="google-tab-account">
               <div style={{ marginBottom: '1.2rem' }}>
-                <h3 style={{ margin: 0, fontSize: '16px', color: '#d8f3dc' }}>
+                <h3 className="google-tab-heading">
                   Google Cloud Services &amp; OAuth Status
                 </h3>
-                <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#95d5b2' }}>
+                <p className="google-tab-subtext">
                   Transparent overview of Google APIs, OAuth configuration, and security practices.
                 </p>
               </div>
 
               {/* Service Status Cards */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', marginBottom: '1.5rem' }}>
-                <div style={{ background: '#081c15', border: '1px solid #2d6a4f', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#52b788', marginBottom: '4px' }}>GOOGLE MAPS HANDOFF</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>Active (No Key Needed)</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
-                    Directions (walking/cycling) &amp; place search schemes active.
-                  </div>
-                </div>
-
-                <div style={{ background: '#081c15', border: '1px solid #2d6a4f', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#52b788', marginBottom: '4px' }}>GOOGLE CALENDAR DRAFTS</div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>Active (OAuth-Free)</div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+              <div className="google-status-cards-grid" style={{ marginBottom: '1.5rem' }}>
+                <div className="google-status-card">
+                  <div className="google-status-card-header">GOOGLE CALENDAR DRAFTS</div>
+                  <div className="google-status-card-val">Active (OAuth-Free)</div>
+                  <div className="google-status-card-hint">
                     Prefilled template URLs &amp; RFC 5545 .ics generator active.
                   </div>
                 </div>
 
-                <div style={{ background: '#081c15', border: '1px solid #2d6a4f', borderRadius: '8px', padding: '12px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: 700, color: status?.services?.oauth?.configured ? '#52b788' : '#f59e0b', marginBottom: '4px' }}>
-                    DIRECT TASKS API / OAUTH
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#ffffff' }}>
+                <div className="google-status-card">
+                  <div className="google-status-card-header">DIRECT TASKS API / OAUTH</div>
+                  <div className="google-status-card-val">
                     {status?.services?.oauth?.configured ? 'Configured in .env' : 'Fallback Mode Active'}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                  <div className="google-status-card-hint">
                     {status?.services?.oauth?.configured
                       ? 'OAuth credentials verified.'
                       : 'Clipboard checklist & web drafts active.'}
@@ -1139,22 +650,12 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
               </div>
 
               {/* Institutional Setup Instructions */}
-              <div
-                style={{
-                  background: '#0a1a14',
-                  border: '1px solid rgba(116, 198, 157, 0.2)',
-                  borderRadius: '8px',
-                  padding: '14px',
-                  fontSize: '12px',
-                  color: '#cbd5e1',
-                  marginBottom: '1rem',
-                }}
-              >
-                <div style={{ fontSize: '13px', fontWeight: 700, color: '#d8f3dc', marginBottom: '8px' }}>
+              <div className="google-guide-box" style={{ marginBottom: '1rem' }}>
+                <h4>
                   Institutional Administrator Google Cloud Setup Guide:
-                </div>
+                </h4>
                 <ul style={{ margin: 0, paddingLeft: '20px', lineHeight: 1.6 }}>
-                  <li>Create a project in <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" style={{ color: '#52b788' }}>Google Cloud Console</a>.</li>
+                  <li>Create a project in <a href="https://console.cloud.google.com" target="_blank" rel="noopener noreferrer" style={{ color: 'var(--color-forest-light)' }}>Google Cloud Console</a>.</li>
                   <li>Enable the <strong>Google Tasks API</strong> under APIs &amp; Services -&gt; Library.</li>
                   <li>Configure the <strong>OAuth Consent Screen</strong> with minimal scope: <code>https://www.googleapis.com/auth/tasks</code>.</li>
                   <li>Create an <strong>OAuth 2.0 Web Client ID</strong>.</li>
@@ -1163,7 +664,7 @@ export const GoogleServicesModal: React.FC<GoogleServicesModalProps> = ({
                 </ul>
               </div>
 
-              <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic' }}>
+              <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic' }}>
                 Security: No tokens or secrets are ever stored in browser localStorage or committed to Git. Tokens are managed server-side with strict TTL expiration.
               </div>
             </div>

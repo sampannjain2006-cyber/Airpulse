@@ -12,6 +12,41 @@ interface AirQualityMeterProps {
   className?: string;
 }
 
+/**
+ * Calibrate the 0-500 CPCB NAQI sub-index scale to the 6 equal-width gauge segments.
+ * Segments:
+ * 1. Good: 0–50       -> [0%, 16.67%]
+ * 2. Satisfactory: 51–100 -> [16.67%, 33.33%]
+ * 3. Moderate: 101–200 -> [33.33%, 50.00%]
+ * 4. Poor: 201–300     -> [50.00%, 66.67%]
+ * 5. Very Poor: 301–400-> [66.67%, 83.33%]
+ * 6. Severe: 401–500   -> [83.33%, 100.00%]
+ */
+function getCpcbPointerPercent(subIndex: number | null, tierLevel: number | null): number {
+  if (subIndex === null || isNaN(subIndex)) {
+    if (tierLevel !== null && tierLevel >= 1 && tierLevel <= 6) {
+      return ((tierLevel - 0.5) / 6) * 100;
+    }
+    return 0;
+  }
+  const val = Math.max(0, Math.min(500, subIndex));
+  const segWidth = 100 / 6;
+
+  if (val <= 50) {
+    return (val / 50) * segWidth;
+  } else if (val <= 100) {
+    return segWidth + ((val - 50) / 50) * segWidth;
+  } else if (val <= 200) {
+    return 2 * segWidth + ((val - 100) / 100) * segWidth;
+  } else if (val <= 300) {
+    return 3 * segWidth + ((val - 200) / 100) * segWidth;
+  } else if (val <= 400) {
+    return 4 * segWidth + ((val - 300) / 100) * segWidth;
+  } else {
+    return 5 * segWidth + ((val - 400) / 100) * segWidth;
+  }
+}
+
 export const AirQualityMeter: React.FC<AirQualityMeterProps> = ({
   observation,
   station,
@@ -23,17 +58,19 @@ export const AirQualityMeter: React.FC<AirQualityMeterProps> = ({
   const hasPm10 = observation?.pm10 != null && !isNaN(Number(observation.pm10));
 
   // Determine primary metric and severity evaluation
-  let primaryMetric = 'aqi';
+  let primaryMetric = 'pm25';
   let primaryValue: number | null = null;
   let isAuthoritativeAqi = false;
 
-  if (hasAqi) {
+  if (hasPm25) {
+    // PM2.5 is the primary target pollutant for AirPulse
+    primaryMetric = 'pm25';
+    primaryValue = Number(observation!.pm25);
+    if (hasAqi) isAuthoritativeAqi = true;
+  } else if (hasAqi) {
     primaryMetric = 'aqi';
     primaryValue = Number(observation!.aqi);
     isAuthoritativeAqi = true;
-  } else if (hasPm25) {
-    primaryMetric = 'pm25';
-    primaryValue = Number(observation!.pm25);
   } else if (hasPm10) {
     primaryMetric = 'pm10';
     primaryValue = Number(observation!.pm10);
@@ -45,14 +82,9 @@ export const AirQualityMeter: React.FC<AirQualityMeterProps> = ({
 
   const isAvailable = severity && severity.status === 'valid' && severity.value !== null;
   const activeLevel = isAvailable ? severity.severity_level || 1 : null;
-  const subIndex = severity?.aqi_sub_index ?? (isAuthoritativeAqi ? primaryValue : null);
+  const subIndex = severity?.aqi_sub_index ?? (isAuthoritativeAqi ? Number(observation?.aqi) : null);
 
-  // Gauge pointer calculation across 0-500 scale
-  const pointerPercent = subIndex !== null
-    ? Math.min(100, Math.max(0, (subIndex / 500) * 100))
-    : activeLevel !== null
-    ? ((activeLevel - 0.5) / 6) * 100
-    : 0;
+  const pointerPercent = getCpcbPointerPercent(subIndex, activeLevel);
 
   if (!isAvailable) {
     return (
@@ -70,9 +102,9 @@ export const AirQualityMeter: React.FC<AirQualityMeterProps> = ({
         <div className="aqi-unavailable-banner">
           <span className="warn-icon">⚠️</span>
           <div>
-            <strong>Air Quality Index (AQI) Unavailable</strong>
+            <strong>Air Quality Readings Unavailable</strong>
             <p>
-              This station currently reports no active particulate readings (PM2.5 or PM10) required to compute
+              This station currently reports no active particulate measurements (PM2.5 or PM10) required to compute
               an official CPCB NAQI rating. Check individual pollutant readings below.
             </p>
           </div>
@@ -90,14 +122,14 @@ export const AirQualityMeter: React.FC<AirQualityMeterProps> = ({
             <span className={`status-dot ${isAuthoritativeAqi ? 'cyan' : 'green'}`} />
             <span>
               {isAuthoritativeAqi
-                ? 'OFFICIAL CPCB NAQI (AUTHORITATIVE)'
-                : 'PRIMARY INDICATOR: CPCB PM2.5 SUB-INDEX'}
+                ? 'OFFICIAL CPCB NAQI (MULTI-POLLUTANT)'
+                : 'PRIMARY CONCENTRATION: GROUND PM2.5'}
             </span>
           </span>
 
           {!isAuthoritativeAqi && (
-            <span className="aqi-notice-chip" title="Full multi-pollutant AQI requires 3+ parameters">
-              AQI unavailable (Single-pollutant reading)
+            <span className="aqi-notice-chip" title="Full multi-pollutant AQI requires ≥3 parameters with PM10 or PM2.5">
+              Overall AQI unavailable (Single-pollutant reading)
             </span>
           )}
         </div>
@@ -135,23 +167,36 @@ export const AirQualityMeter: React.FC<AirQualityMeterProps> = ({
       <div className="aqi-primary-value-row">
         <div className="aqi-numeric-box">
           <div className="aqi-metric-title">
-            {isAuthoritativeAqi ? 'Air Quality Index' : `${severity.metric_display} Concentration`}
+            {primaryMetric === 'pm25'
+              ? 'PM2.5 Concentration (24h Ground Average)'
+              : primaryMetric === 'aqi'
+              ? 'Official Air Quality Index'
+              : `${severity.metric_display} Concentration`}
           </div>
+
           <div className="aqi-big-number">
-            {isAuthoritativeAqi ? (
+            {primaryMetric === 'aqi' ? (
               Math.round(severity.value!)
             ) : (
               <>
-                {formatValue(severity.value, '')}
-                <small className="aqi-unit-inline">{severity.unit}</small>
+                <span className="aqi-value-text">{formatValue(severity.value, '')}</span>
+                <span className="aqi-unit-inline">{severity.unit || 'µg/m³'}</span>
               </>
             )}
           </div>
-          {!isAuthoritativeAqi && subIndex !== null && (
-            <div className="aqi-calculated-subindex">
-              CPCB Sub-Index: <strong>{subIndex}</strong> (Calculated)
-            </div>
-          )}
+
+          <div className="aqi-subindex-row">
+            {subIndex !== null && (
+              <span className="aqi-calculated-subindex">
+                CPCB PM2.5 Sub-Index: <strong>{subIndex}</strong> (Calculated)
+              </span>
+            )}
+            {isAuthoritativeAqi && observation?.aqi != null && (
+              <span className="aqi-authoritative-badge">
+                · Official Multi-Pollutant AQI: <strong>{Math.round(Number(observation.aqi))}</strong>
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="aqi-category-box">
@@ -174,21 +219,22 @@ export const AirQualityMeter: React.FC<AirQualityMeterProps> = ({
       {/* Horizontal 6-Segment CPCB Gauge Bar */}
       <div className="aqi-gauge-container">
         <div className="aqi-gauge-track-wrap">
-          {/* Animated/Positioned Pointer Pin */}
+          {/* Calibrated Position Pointer Pin */}
           <div
             className="aqi-gauge-pointer"
             style={{
               left: `${pointerPercent}%`,
-              borderColor: `${severity.color} transparent transparent transparent`,
+              color: severity.color,
             }}
-            title={`${severity.category} (Index: ${subIndex || severity.value})`}
+            title={`${severity.category} (Sub-Index: ${subIndex ?? severity.value})`}
           >
             <div className="pointer-value-bubble" style={{ backgroundColor: severity.color }}>
-              {subIndex || Math.round(severity.value!)}
+              {subIndex ?? Math.round(severity.value!)}
             </div>
+            <div className="pointer-pin-arrow" style={{ borderTopColor: severity.color }} />
           </div>
 
-          {/* 6 Segments */}
+          {/* 6 Equal-Width CPCB Segments */}
           <div className="aqi-gauge-track">
             {CPCB_CATEGORIES.map((cat) => {
               const isCurrent = cat.level === activeLevel;

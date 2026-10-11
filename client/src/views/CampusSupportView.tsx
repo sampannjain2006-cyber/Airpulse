@@ -326,16 +326,16 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
   return (
     <div className="campus-support-view nature-container" style={{ padding: '1.5rem', maxWidth: '1280px', margin: '0 auto' }}>
       {/* 1. Header Banner & Title */}
-      <div className="campus-view-header" style={{ marginBottom: '1.5rem', borderBottom: '1px solid rgba(27,67,50,0.15)', paddingBottom: '1.2rem' }}>
+      <div className="campus-view-header" style={{ marginBottom: '1.5rem', borderBottom: '1px solid var(--color-border)', paddingBottom: '1.2rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <span style={{ fontSize: '28px' }}>🎓</span>
-              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: '#1b4332' }}>
+              <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 700, color: 'var(--color-forest)' }}>
                 Student Environmental Health &amp; Campus Support
               </h1>
             </div>
-            <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: '#40916c', maxWidth: '800px' }}>
+            <p style={{ margin: '6px 0 0 0', fontSize: '13px', color: 'var(--color-text-muted)', maxWidth: '800px' }}>
               Privacy-conscious institutional decision-support system for <strong>{selectedCampus?.name || 'Selected Campus'}</strong> ({selectedCampus?.city || 'India'}). Assists educational staff in coordinating academic accommodations, reviewing environmental advisories, and supporting voluntarily disclosed student needs.
             </p>
           </div>
@@ -343,7 +343,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
           {/* Campus Selector & Role Simulator */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '280px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label htmlFor="campus-select" style={{ fontSize: '12px', fontWeight: 600, color: '#2d6a4f' }}>
+              <label htmlFor="campus-select" style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)' }}>
                 Campus:
               </label>
               <select
@@ -354,11 +354,11 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                   flex: 1,
                   padding: '6px 10px',
                   borderRadius: '6px',
-                  border: '1px solid #74c69d',
-                  background: '#ffffff',
+                  border: '1px solid var(--color-border)',
+                  background: 'var(--color-bg-surface)',
                   fontSize: '13px',
                   fontWeight: 600,
-                  color: '#1b4332',
+                  color: 'var(--color-forest)',
                 }}
               >
                 {campuses.map((c) => (
@@ -370,8 +370,8 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
             </div>
 
             {/* Role Switcher Bar to demonstrate Server-Side Authorization */}
-            <div style={{ background: '#e8f5e9', padding: '6px 10px', borderRadius: '8px', border: '1px solid #b7e4c7' }}>
-              <div style={{ fontSize: '11px', fontWeight: 700, color: '#2d6a4f', marginBottom: '4px' }}>
+            <div style={{ background: 'var(--color-bg-subtle)', padding: '6px 10px', borderRadius: '8px', border: '1px solid var(--color-border)' }}>
+              <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-forest)', marginBottom: '4px' }}>
                 CURRENT USER ROLE:
               </div>
               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -387,9 +387,9 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                         fontSize: '11px',
                         fontWeight: isActive ? 700 : 500,
                         borderRadius: '4px',
-                        border: isActive ? '1px solid #1b4332' : '1px solid #cce3de',
-                        background: isActive ? '#1b4332' : '#ffffff',
-                        color: isActive ? '#ffffff' : '#2d6a4f',
+                        border: isActive ? '1px solid var(--color-forest)' : '1px solid var(--color-border)',
+                        background: isActive ? 'var(--color-forest)' : 'var(--color-bg-surface)',
+                        color: isActive ? 'var(--color-text-inverse, #ffffff)' : 'var(--color-text-secondary)',
                         cursor: 'pointer',
                         transition: 'all 0.15s ease',
                       }}
@@ -427,7 +427,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
       </div>
 
       {/* 2. Sub-Navigation Tabs */}
-      <nav style={{ display: 'flex', gap: '8px', borderBottom: '2px solid #e2e8f0', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+      <nav style={{ display: 'flex', gap: '8px', borderBottom: '2px solid var(--color-border)', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
         {[
           { id: 'status', label: 'Campus Environmental Status', icon: '🌿' },
           { id: 'policies', label: 'Response Policies & Evaluation', icon: '⚖️' },
@@ -449,10 +449,10 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                 padding: '8px 14px',
                 fontSize: '13px',
                 fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#1b4332' : '#64748b',
+                color: isActive ? 'var(--color-forest)' : 'var(--color-text-muted)',
                 background: 'transparent',
                 border: 'none',
-                borderBottom: isActive ? '3px solid #1b4332' : '3px solid transparent',
+                borderBottom: isActive ? '3px solid var(--color-forest)' : '3px solid transparent',
                 cursor: 'pointer',
                 marginBottom: '-2px',
               }}
@@ -460,7 +460,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
               <span>{tab.icon}</span>
               <span>{tab.label}</span>
               {tab.badge !== undefined && tab.badge > 0 && (
-                <span style={{ fontSize: '10px', background: isActive ? '#1b4332' : '#94a3b8', color: '#fff', padding: '1px 6px', borderRadius: '10px' }}>
+                <span style={{ fontSize: '10px', background: isActive ? 'var(--color-forest)' : 'var(--color-border-strong)', color: '#fff', padding: '1px 6px', borderRadius: '10px' }}>
                   {tab.badge}
                 </span>
               )}
@@ -473,22 +473,22 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
       {activeTab === 'status' && (
         <div className="campus-tab-status">
           {loading ? (
-            <div style={{ padding: '2rem', textAlign: 'center', color: '#64748b' }}>Loading campus environmental data…</div>
+            <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--color-text-muted)' }}>Loading campus environmental data…</div>
           ) : error ? (
             <div style={{ padding: '1.5rem', background: '#fee2e2', color: '#991b1b', borderRadius: '8px' }}>{error}</div>
           ) : envStatus ? (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
               {/* Card A: Campus Environmental Telemetry */}
-              <div style={{ background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '1.25rem', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+              <div style={{ background: 'var(--color-bg-surface)', borderRadius: '10px', border: '1px solid var(--color-border)', padding: '1.25rem', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
                   <div>
-                    <span style={{ fontSize: '11px', fontWeight: 700, color: '#40916c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                       CAMPUS AIR QUALITY
                     </span>
-                    <h3 style={{ margin: '4px 0 0 0', fontSize: '18px', color: '#1b4332' }}>
+                    <h3 style={{ margin: '4px 0 0 0', fontSize: '18px', color: 'var(--color-forest)' }}>
                       {envStatus.campus.name}
                     </h3>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)', marginTop: '2px' }}>
                       📍 {envStatus.campus.city}, {envStatus.campus.state} ({envStatus.campus.coordinates.latitude.toFixed(4)}°N, {envStatus.campus.coordinates.longitude.toFixed(4)}°E)
                     </div>
                   </div>
@@ -522,14 +522,14 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                   title={onOpenPollutantInfo ? 'Click to inspect PM2.5 standards & health guidance' : undefined}
                 >
                   <div>
-                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#475569' }}>FINE PARTICULATE (PM2.5) ℹ️</div>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--color-text-secondary)' }}>FINE PARTICULATE (PM2.5) ℹ️</div>
                     <div style={{ fontSize: '28px', fontWeight: 800, color: envStatus.environmental_parameters.severity?.color || '#1b4332' }}>
                       {envStatus.environmental_parameters.pm25 !== null ? envStatus.environmental_parameters.pm25 : 'N/A'}{' '}
                       <span style={{ fontSize: '14px', fontWeight: 500 }}>{envStatus.environmental_parameters.unit}</span>
                     </div>
                   </div>
                   <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>CPCB NAQI CATEGORY</div>
+                    <div style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>CPCB NAQI CATEGORY</div>
                     <div
                       style={{
                         fontSize: '14px',
@@ -547,7 +547,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                   <div
                     style={{
                       fontSize: '12px',
-                      color: '#475569',
+                      color: 'var(--color-text-secondary)',
                       marginBottom: '12px',
                       cursor: onOpenPollutantInfo ? 'pointer' : 'default',
                     }}
@@ -559,39 +559,39 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                 )}
 
                 {/* Station & Distance Provenance with Microclimate Notice */}
-                <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: '6px', fontSize: '12px', color: '#334155', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
+                <div style={{ background: 'var(--color-bg-subtle)', padding: '10px 12px', borderRadius: '6px', fontSize: '12px', color: 'var(--color-text-secondary)', border: '1px solid var(--color-border)', marginBottom: '12px' }}>
                   <div>
                     📡 <strong>Nearest Sensor:</strong> {envStatus.reference_station.name} ({envStatus.reference_station.distance_km} km from campus)
                   </div>
-                  <div style={{ marginTop: '4px', fontSize: '11px', color: '#64748b' }}>
+                  <div style={{ marginTop: '4px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
                     <strong>Limitation Notice:</strong> {envStatus.data_provenance.limitation_notice}
                   </div>
                 </div>
 
                 {/* Statutory Disclaimer */}
-                <div style={{ fontSize: '11px', color: '#64748b', fontStyle: 'italic', lineHeight: 1.4 }}>
+                <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', fontStyle: 'italic', lineHeight: 1.4 }}>
                   {envStatus.disclaimer}
                 </div>
               </div>
 
               {/* Card B: Institutional Response Level & Precautions */}
-              <div style={{ background: '#ffffff', borderRadius: '10px', border: '1px solid #e2e8f0', padding: '1.25rem', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                <span style={{ fontSize: '11px', fontWeight: 700, color: '#40916c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+              <div style={{ background: 'var(--color-bg-surface)', borderRadius: '10px', border: '1px solid var(--color-border)', padding: '1.25rem', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                   INSTITUTIONAL RESPONSE LEVEL
                 </span>
-                <h3 style={{ margin: '4px 0 10px 0', fontSize: '18px', color: '#1b4332' }}>
+                <h3 style={{ margin: '4px 0 10px 0', fontSize: '18px', color: 'var(--color-forest)' }}>
                   {envStatus.matched_policy_tier?.title || 'Level 1: Routine Advisory'}
                 </h3>
-                <p style={{ fontSize: '13px', color: '#334155', margin: '0 0 12px 0' }}>
+                <p style={{ fontSize: '13px', color: 'var(--color-text-secondary)', margin: '0 0 12px 0' }}>
                   {envStatus.matched_policy_tier?.summary}
                 </p>
 
                 {/* Operational Actions */}
                 <div style={{ marginBottom: '12px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#1b4332', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-forest)', marginBottom: '6px' }}>
                     Operational Campus Guidelines:
                   </div>
-                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: '#334155' }}>
+                  <ul style={{ margin: 0, paddingLeft: '18px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
                     {envStatus.matched_policy_tier?.recommended_actions?.map((act, i) => (
                       <li key={i} style={{ marginBottom: '3px' }}>{act}</li>
                     ))}
@@ -600,12 +600,12 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
 
                 {/* Permitted Accommodations */}
                 <div style={{ marginBottom: '16px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#1b4332', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-forest)', marginBottom: '6px' }}>
                     Permitted Academic Accommodations:
                   </div>
                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                     {envStatus.matched_policy_tier?.permitted_accommodations?.map((acc, i) => (
-                      <span key={i} style={{ background: '#e8f5e9', color: '#1b4332', fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '12px', border: '1px solid #b7e4c7' }}>
+                      <span key={i} style={{ background: 'var(--color-bg-subtle)', color: 'var(--color-forest)', fontSize: '11px', fontWeight: 600, padding: '3px 8px', borderRadius: '12px', border: '1px solid var(--color-border)' }}>
                         ✓ {acc.replace(/_/g, ' ')}
                       </span>
                     ))}
@@ -615,11 +615,11 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                 {/* Verified WHO / CPCB Precautions */}
                 {envStatus.precaution_guidance?.length > 0 && (
                   <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '12px' }}>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#1b4332', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-forest)', marginBottom: '6px' }}>
                       WHO / CPCB Public Health Guidance:
                     </div>
                     {envStatus.precaution_guidance.slice(0, 2).map((rec) => (
-                      <div key={rec.id} style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '6px', fontSize: '11px', color: '#334155', marginBottom: '6px' }}>
+                      <div key={rec.id} style={{ background: 'var(--color-bg-subtle)', padding: '8px 10px', borderRadius: '6px', fontSize: '11px', color: 'var(--color-text-secondary)', marginBottom: '6px' }}>
                         <strong>{rec.title}:</strong> {rec.explanation}
                       </div>
                     ))}
@@ -636,8 +636,8 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
         <div className="campus-tab-policies">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#1b4332' }}>Institutional Environmental Response Protocols</h3>
-              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--color-forest)' }}>Institutional Environmental Response Protocols</h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--color-text-muted)' }}>
                 Configurable administrative policies correlating CPCB NAQI severity bands with campus operational actions.
                 {catalog?.support_categories ? ` (${catalog.support_categories.length} registered support categories).` : ''}
               </p>
@@ -648,7 +648,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
               onClick={handleEvaluatePolicy}
               disabled={evaluating}
               style={{
-                background: '#1b4332',
+                background: 'var(--color-forest)',
                 color: '#ffffff',
                 border: 'none',
                 padding: '8px 16px',
@@ -683,7 +683,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                 {evaluationResult.proposed_response.advisory_text}
               </p>
 
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', fontSize: '12px', color: '#166534', background: '#ffffff', padding: '10px', borderRadius: '6px', border: '1px solid #bbf7d0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', fontSize: '12px', color: '#166534', background: 'var(--color-bg-surface)', padding: '10px', borderRadius: '6px', border: '1px solid var(--color-border)' }}>
                 <div><strong>Triggered Tier:</strong> Level {evaluationResult.triggered_policy.policy_tier} ({evaluationResult.triggered_policy.tier_name})</div>
                 <div><strong>Consented Students:</strong> {evaluationResult.privacy_conscious_matching.active_consented_profiles_count} profiles</div>
                 <div><strong>Eligible for Accommodation Review:</strong> {evaluationResult.privacy_conscious_matching.eligible_students_for_review_count} students</div>
@@ -702,27 +702,27 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
               <div
                 key={pol.id}
                 style={{
-                  background: '#ffffff',
+                  background: 'var(--color-bg-surface)',
                   borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
+                  border: '1px solid var(--color-border)',
                   padding: '1rem',
                   borderTop: `4px solid ${pol.policy_tier === 1 ? '#10b981' : pol.policy_tier === 2 ? '#f59e0b' : pol.policy_tier === 3 ? '#ef4444' : '#7c3aed'}`,
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)' }}>
                     LEVEL {pol.policy_tier} ({pol.tier_name.toUpperCase()})
                   </span>
-                  <span style={{ fontSize: '11px', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                  <span style={{ fontSize: '11px', background: 'var(--color-bg-muted)', padding: '2px 6px', borderRadius: '4px', fontWeight: 600 }}>
                     PM2.5: {pol.threshold_min}{pol.threshold_max ? `–${pol.threshold_max}` : '+'} µg/m³
                   </span>
                 </div>
-                <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', color: '#1b4332' }}>{pol.title}</h4>
-                <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: '#475569', lineHeight: 1.4 }}>{pol.summary}</p>
-                <div style={{ fontSize: '11px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>Permitted Accommodations:</div>
+                <h4 style={{ margin: '0 0 6px 0', fontSize: '14px', color: 'var(--color-forest)' }}>{pol.title}</h4>
+                <p style={{ margin: '0 0 8px 0', fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>{pol.summary}</p>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>Permitted Accommodations:</div>
                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                   {pol.permitted_accommodations.map((acc, i) => (
-                    <span key={i} style={{ fontSize: '10px', background: '#f8fafc', border: '1px solid #cbd5e1', padding: '2px 6px', borderRadius: '4px', color: '#334155' }}>
+                    <span key={i} style={{ fontSize: '10px', background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', padding: '2px 6px', borderRadius: '4px', color: 'var(--color-text-secondary)' }}>
                       {acc.replace(/_/g, ' ')}
                     </span>
                   ))}
@@ -738,8 +738,8 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
         <div className="campus-tab-students">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#1b4332' }}>Restricted Voluntary Support Profiles</h3>
-              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--color-forest)' }}>Restricted Voluntary Support Profiles</h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--color-text-muted)' }}>
                 Voluntary disclosures for environmental support needs. Strict privacy: Minimal support categories only; zero medical records or prescriptions.
               </p>
             </div>
@@ -749,7 +749,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                 type="button"
                 onClick={() => setIsStudentFormOpen(!isStudentFormOpen)}
                 style={{
-                  background: '#2d6a4f',
+                  background: 'var(--color-forest)',
                   color: '#ffffff',
                   border: 'none',
                   padding: '8px 14px',
@@ -765,17 +765,17 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
           </div>
 
           {/* Privacy Notice Banner */}
-          <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '12px', marginBottom: '1.25rem', fontSize: '12px', color: '#334155' }}>
+          <div style={{ background: 'var(--color-bg-subtle)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '12px', marginBottom: '1.25rem', fontSize: '12px', color: 'var(--color-text-secondary)' }}>
             🔒 <strong>Institutional Privacy &amp; Consent Standard:</strong> Support profiles are stored under pseudonymized tokens. No clinical diagnoses, doctor prescriptions, or detailed medical histories are accepted or retained. Students may withdraw consent at any time to purge active accommodations.
           </div>
 
           {/* Student Registration Form */}
           {isStudentFormOpen && (
-            <form onSubmit={handleRegisterStudent} style={{ background: '#ffffff', border: '1px solid #74c69d', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#1b4332' }}>Voluntary Environmental Disclosure Form</h4>
+            <form onSubmit={handleRegisterStudent} style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: 'var(--color-forest)' }}>Voluntary Environmental Disclosure Form</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>
                     Student Initials / Display Token:
                   </label>
                   <input
@@ -784,11 +784,11 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                     onChange={(e) => setNewStudentName(e.target.value)}
                     placeholder="e.g. Student M.S."
                     required
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>
                     Academic Department:
                   </label>
                   <input
@@ -797,17 +797,17 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                     onChange={(e) => setNewStudentDept(e.target.value)}
                     placeholder="e.g. Computer Science"
                     required
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>
                     Support Category (Minimal):
                   </label>
                   <select
                     value={newStudentCategory}
                     onChange={(e) => setNewStudentCategory(e.target.value)}
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                   >
                     <option value="respiratory_sensitivity">Respiratory Sensitivity</option>
                     <option value="cardiovascular_concern">Cardiovascular Concern</option>
@@ -816,13 +816,13 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>
                     Accommodation Preference:
                   </label>
                   <select
                     value={newStudentAccPref}
                     onChange={(e) => setNewStudentAccPref(e.target.value)}
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                   >
                     <option value="recorded_lecture">Recorded Lecture Provision</option>
                     <option value="alternative_class_slot">Alternative Class / Tutorial Slot</option>
@@ -834,7 +834,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
               </div>
 
               {/* Consent Checkbox */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: '#1b4332', marginBottom: '14px', cursor: 'pointer' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', color: 'var(--color-forest)', marginBottom: '14px', cursor: 'pointer' }}>
                 <input
                   type="checkbox"
                   checked={newStudentConsent}
@@ -847,7 +847,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
 
               <button
                 type="submit"
-                style={{ background: '#1b4332', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ background: 'var(--color-forest)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
               >
                 Submit Voluntary Support Profile
               </button>
@@ -865,20 +865,20 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
               {students.map((stu) => (
-                <div key={stu.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1rem', opacity: stu.consent_status === 'withdrawn' ? 0.6 : 1 }}>
+                <div key={stu.id} style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '1rem', opacity: stu.consent_status === 'withdrawn' ? 0.6 : 1 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                    <span style={{ fontSize: '12px', fontWeight: 700, color: '#1b4332' }}>{stu.display_name}</span>
+                    <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--color-forest)' }}>{stu.display_name}</span>
                     <span style={{ fontSize: '11px', background: stu.consent_status === 'active' ? '#dcfce7' : '#fee2e2', color: stu.consent_status === 'active' ? '#166534' : '#991b1b', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
                       {stu.consent_status.toUpperCase()}
                     </span>
                   </div>
-                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '8px' }}>
                     Token: <code>{stu.student_id_hash}</code> · Dept: {stu.academic_department}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#334155', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '4px' }}>
                     <strong>Category:</strong> {stu.support_category.replace(/_/g, ' ')}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#334155', marginBottom: '10px' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--color-text-secondary)', marginBottom: '10px' }}>
                     <strong>Preferred Accommodation:</strong> {stu.accommodation_preference.replace(/_/g, ' ')}
                   </div>
                   {stu.consent_status === 'active' && (
@@ -902,8 +902,8 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
         <div className="campus-tab-notices">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#1b4332' }}>Campus Environmental Advisories &amp; Notices</h3>
-              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--color-forest)' }}>Campus Environmental Advisories &amp; Notices</h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--color-text-muted)' }}>
                 Draft, review, and approve campus notifications. Delivery status remains strictly distinct from approval status.
               </p>
             </div>
@@ -913,7 +913,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                 type="button"
                 onClick={() => setIsNoticeFormOpen(!isNoticeFormOpen)}
                 style={{
-                  background: '#2d6a4f',
+                  background: 'var(--color-forest)',
                   color: '#ffffff',
                   border: 'none',
                   padding: '8px 14px',
@@ -930,11 +930,11 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
 
           {/* Draft Notice Form */}
           {isNoticeFormOpen && (
-            <form onSubmit={handleCreateNotice} style={{ background: '#ffffff', border: '1px solid #74c69d', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#1b4332' }}>Draft New Campus Environmental Notice</h4>
+            <form onSubmit={handleCreateNotice} style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: 'var(--color-forest)' }}>Draft New Campus Environmental Notice</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>
                     Notice Title:
                   </label>
                   <input
@@ -943,17 +943,17 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                     onChange={(e) => setNewNoticeTitle(e.target.value)}
                     placeholder="e.g. Tier 3 Advisory: Very Poor Air Quality Forecast"
                     required
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>
                     Notice Category:
                   </label>
                   <select
                     value={newNoticeCategory}
                     onChange={(e) => setNewNoticeCategory(e.target.value)}
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                   >
                     <option value="precaution_guidance">Precaution Guidance</option>
                     <option value="general_advisory">General Campus Advisory</option>
@@ -966,7 +966,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
               </div>
 
               <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>
                   Advisory &amp; Accommodation Guidance Text:
                 </label>
                 <textarea
@@ -975,13 +975,13 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                   placeholder="Specify air quality context, precautions, and academic accommodations approved under institutional policy..."
                   rows={3}
                   required
-                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '8px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                 />
               </div>
 
               <button
                 type="submit"
-                style={{ background: '#1b4332', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ background: 'var(--color-forest)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
               >
                 Save as Draft for Review
               </button>
@@ -991,9 +991,9 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
           {/* Notices Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1rem' }}>
             {notices.map((n) => (
-              <div key={n.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '1.25rem', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
+              <div key={n.id} style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '1.25rem', boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: 700, color: '#64748b' }}>{n.notice_code}</span>
+                  <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--color-text-muted)' }}>{n.notice_code}</span>
                   <span
                     style={{
                       fontSize: '11px',
@@ -1007,8 +1007,8 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                     {n.status.toUpperCase()}
                   </span>
                 </div>
-                <h4 style={{ margin: '4px 0 8px 0', fontSize: '15px', color: '#1b4332' }}>{n.title}</h4>
-                <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: '#334155', lineHeight: 1.4 }}>{n.advisory_text}</p>
+                <h4 style={{ margin: '4px 0 8px 0', fontSize: '15px', color: 'var(--color-forest)' }}>{n.title}</h4>
+                <p style={{ margin: '0 0 10px 0', fontSize: '12px', color: 'var(--color-text-secondary)', lineHeight: 1.4 }}>{n.advisory_text}</p>
 
                 {/* Accommodations */}
                 <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap', marginBottom: '10px' }}>
@@ -1020,7 +1020,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                 </div>
 
                 {/* Roadmap Delivery Status Box */}
-                <div style={{ background: '#f8fafc', padding: '8px', borderRadius: '6px', fontSize: '11px', color: '#64748b', marginBottom: '12px', border: '1px dashed #cbd5e1' }}>
+                <div style={{ background: 'var(--color-bg-subtle)', padding: '8px', borderRadius: '6px', fontSize: '11px', color: 'var(--color-text-muted)', marginBottom: '12px', border: '1px dashed #cbd5e1' }}>
                   <div><strong>Delivery Channel:</strong> {n.delivery_channel}</div>
                   <div><strong>Delivery Status:</strong> {n.delivery_status} (Carrier connected: {String(n.delivery_provider_connected)})</div>
                   <div style={{ fontSize: '10px', color: '#94a3b8', marginTop: '2px' }}>
@@ -1051,8 +1051,8 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
         <div className="campus-tab-accommodations">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '10px' }}>
             <div>
-              <h3 style={{ margin: 0, fontSize: '18px', color: '#1b4332' }}>Academic Accommodation Review Queue</h3>
-              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#64748b' }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--color-forest)' }}>Academic Accommodation Review Queue</h3>
+              <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: 'var(--color-text-muted)' }}>
                 Human review workflow for alternative lecture recordings, tutorial section shifts, and attendance considerations.
               </p>
             </div>
@@ -1061,7 +1061,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
               type="button"
               onClick={() => setIsAccFormOpen(!isAccFormOpen)}
               style={{
-                background: '#2d6a4f',
+                background: 'var(--color-forest)',
                 color: '#ffffff',
                 border: 'none',
                 padding: '8px 14px',
@@ -1077,25 +1077,25 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
 
           {/* Accommodation Request Form */}
           {isAccFormOpen && (
-            <form onSubmit={handleCreateAccommodation} style={{ background: '#ffffff', border: '1px solid #74c69d', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem' }}>
-              <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: '#1b4332' }}>Submit Academic Accommodation Request</h4>
+            <form onSubmit={handleCreateAccommodation} style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', padding: '1.25rem', marginBottom: '1.5rem' }}>
+              <h4 style={{ margin: '0 0 12px 0', fontSize: '15px', color: 'var(--color-forest)' }}>Submit Academic Accommodation Request</h4>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>Course Code:</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>Course Code:</label>
                   <input
                     type="text"
                     value={accCourseCode}
                     onChange={(e) => setAccCourseCode(e.target.value)}
                     required
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                   />
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>Accommodation Type:</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>Accommodation Type:</label>
                   <select
                     value={accType}
                     onChange={(e) => setAccType(e.target.value)}
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                   >
                     <option value="recorded_lecture">Recorded Lecture Provision</option>
                     <option value="alternative_class_slot">Alternative Class / Tutorial Slot</option>
@@ -1104,32 +1104,32 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                   </select>
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>Target Date:</label>
+                  <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>Target Date:</label>
                   <input
                     type="date"
                     value={accDate}
                     onChange={(e) => setAccDate(e.target.value)}
                     required
-                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                    style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                   />
                 </div>
               </div>
 
               <div style={{ marginBottom: '12px' }}>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: '#1b4332', marginBottom: '4px' }}>Environmental Reason:</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, color: 'var(--color-forest)', marginBottom: '4px' }}>Environmental Reason:</label>
                 <input
                   type="text"
                   value={accReason}
                   onChange={(e) => setAccReason(e.target.value)}
                   placeholder="e.g. High PM2.5 episode coincides with outdoor lab schedule"
                   required
-                  style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '13px' }}
+                  style={{ width: '100%', padding: '6px 10px', borderRadius: '6px', border: '1px solid var(--color-border)', fontSize: '13px' }}
                 />
               </div>
 
               <button
                 type="submit"
-                style={{ background: '#1b4332', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
+                style={{ background: 'var(--color-forest)', color: '#ffffff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}
               >
                 Submit for Staff Approval
               </button>
@@ -1137,10 +1137,10 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
           )}
 
           {/* Accommodations Table */}
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
+                <tr style={{ background: 'var(--color-bg-subtle)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>
                   <th style={{ padding: '10px 14px' }}>Code</th>
                   <th style={{ padding: '10px 14px' }}>Course</th>
                   <th style={{ padding: '10px 14px' }}>Accommodation</th>
@@ -1151,7 +1151,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
               </thead>
               <tbody>
                 {accommodations.map((acc) => (
-                  <tr key={acc.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                  <tr key={acc.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
                     <td style={{ padding: '10px 14px', fontWeight: 600 }}>{acc.request_code}</td>
                     <td style={{ padding: '10px 14px' }}>{acc.course_code}</td>
                     <td style={{ padding: '10px 14px' }}>{acc.accommodation_type.replace(/_/g, ' ')}</td>
@@ -1189,7 +1189,7 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
                           </button>
                         </div>
                       ) : (
-                        <span style={{ fontSize: '11px', color: '#64748b' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--color-text-muted)' }}>
                           {acc.decision_notes || 'Pending review'}
                         </span>
                       )}
@@ -1205,15 +1205,15 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
       {/* 8. TAB 6: Institutional Audit Trail */}
       {activeTab === 'audit' && (
         <div className="campus-tab-audit">
-          <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', color: '#1b4332' }}>Institutional Decision Audit Trail</h3>
-          <p style={{ margin: '0 0 1rem 0', fontSize: '12px', color: '#64748b' }}>
+          <h3 style={{ margin: '0 0 4px 0', fontSize: '18px', color: 'var(--color-forest)' }}>Institutional Decision Audit Trail</h3>
+          <p style={{ margin: '0 0 1rem 0', fontSize: '12px', color: 'var(--color-text-muted)' }}>
             Immutable audit record of institutional notice approvals, consent grants/withdrawals, and accommodation decisions.
           </p>
 
-          <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+          <div style={{ background: 'var(--color-bg-surface)', border: '1px solid var(--color-border)', borderRadius: '8px', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px', textAlign: 'left' }}>
               <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
+                <tr style={{ background: 'var(--color-bg-subtle)', borderBottom: '1px solid var(--color-border)', color: 'var(--color-text-muted)', fontSize: '11px', textTransform: 'uppercase' }}>
                   <th style={{ padding: '10px 14px' }}>Timestamp</th>
                   <th style={{ padding: '10px 14px' }}>Actor Role</th>
                   <th style={{ padding: '10px 14px' }}>Action Type</th>
@@ -1223,18 +1223,18 @@ export const CampusSupportView: React.FC<CampusSupportViewProps> = ({
               </thead>
               <tbody>
                 {auditLogs.map((log) => (
-                  <tr key={log.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                    <td style={{ padding: '10px 14px', fontSize: '11px', color: '#64748b' }}>
+                  <tr key={log.id} style={{ borderBottom: '1px solid var(--color-border)' }}>
+                    <td style={{ padding: '10px 14px', fontSize: '11px', color: 'var(--color-text-muted)' }}>
                       {new Date(log.timestamp).toLocaleString()}
                     </td>
                     <td style={{ padding: '10px 14px', fontWeight: 600 }}>{log.actor_role}</td>
                     <td style={{ padding: '10px 14px' }}>
-                      <code style={{ fontSize: '11px', background: '#f1f5f9', padding: '2px 4px', borderRadius: '3px' }}>
+                      <code style={{ fontSize: '11px', background: 'var(--color-bg-muted)', padding: '2px 4px', borderRadius: '3px' }}>
                         {log.action_type}
                       </code>
                     </td>
                     <td style={{ padding: '10px 14px', fontSize: '12px' }}>{log.target_entity_type}: {log.target_entity_id}</td>
-                    <td style={{ padding: '10px 14px', fontSize: '12px', color: '#334155' }}>{log.summary}</td>
+                    <td style={{ padding: '10px 14px', fontSize: '12px', color: 'var(--color-text-secondary)' }}>{log.summary}</td>
                   </tr>
                 ))}
               </tbody>

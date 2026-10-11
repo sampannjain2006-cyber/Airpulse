@@ -9,6 +9,7 @@ interface AlertPanelProps {
   forecastAlerts: EnvironmentalAlert[];
   summary: AlertSummaryResponse | null;
   loading: boolean;
+  error?: string | null;
   selectedThreshold: string;
   onSelectThreshold: (category: string) => void;
   onSelectStation?: (stationId: number) => void;
@@ -32,6 +33,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
   forecastAlerts,
   summary,
   loading,
+  error,
   selectedThreshold,
   onSelectThreshold,
   onSelectStation,
@@ -61,6 +63,9 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
   const totalObserved = observedAlerts.length;
   const totalForecast = forecastAlerts.length;
   const activeCount = (isHistorical ? 0 : totalObserved) + totalForecast;
+  const criticalCount = summary
+    ? summary.observed.high_severity_count + summary.forecast.high_severity_count
+    : 0;
 
   // Filter based on active tab
   const displayAlerts =
@@ -90,9 +95,9 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
               <span className="alert-count-chip">
                 {loading ? 'Evaluating…' : `${activeCount} Event${activeCount !== 1 ? 's' : ''}`}
               </span>
-              {summary && summary.observed.high_severity_count + summary.forecast.high_severity_count > 0 && (
+              {criticalCount > 0 && (
                 <span className="alert-high-severity-chip" title="Events at Very Poor or Severe (Tier 5+)">
-                  {summary.observed.high_severity_count + summary.forecast.high_severity_count} Critical
+                  {criticalCount} Critical
                 </span>
               )}
             </div>
@@ -129,7 +134,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
         </div>
 
         {/* Tab Filters */}
-        <div className="alert-tabs-bar" role="tablist">
+        <div className="alert-tabs-bar" role="tablist" aria-label="Alert category filters">
           <button
             className={`alert-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => setActiveTab('all')}
@@ -174,43 +179,54 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
 
         {/* Alerts List Body */}
         <div className="alert-list-body">
-          {loading ? (
+          {error ? (
+            <div className="alert-error-state">
+              <div className="error-icon" aria-hidden="true">⚠️</div>
+              <h4>Unable to Retrieve Environmental Alerts</h4>
+              <p>
+                The monitoring server could not return current telemetry alerts: {error}
+              </p>
+            </div>
+          ) : loading ? (
             <div className="alert-loading-state">
               <div className="pulse-indicator healthy" style={{ margin: '0 auto 12px auto' }} />
-              <span>Checking active air quality readings against safety thresholds…</span>
+              <span>Evaluating active ground telemetry and 5-day predictive forecasts against CPCB thresholds…</span>
             </div>
           ) : displayAlerts.length === 0 ? (
             <div className="alert-empty-state">
               <div className="empty-shield-icon" aria-hidden="true">🛡</div>
               <h4>No Active Alerts</h4>
               <p>
-                No alerts currently meet the selected threshold for this time horizon.
+                No monitoring stations currently meet or exceed the selected threshold ({selectedThreshold.replace('_', ' ')}) for this time horizon.
               </p>
               <div className="empty-state-hint">
-                Threshold criteria adhere to National Air Quality Index standards. You can adjust the sensitivity using the Threshold selector above.
+                Threshold criteria adhere to CPCB National Air Quality Index standards. You can adjust the sensitivity using the Threshold selector above.
               </div>
             </div>
           ) : (
             <div className="alert-cards-container">
               {displayAlerts.map((alert) => {
                 const isObs = alert.alert_type === 'observed';
+                const hasValidSubIndex =
+                  alert.pollutant.sub_index != null &&
+                  !isNaN(Number(alert.pollutant.sub_index));
+
                 return (
-                  <div
+                  <article
                     key={alert.id}
                     className={`alert-card tier-${alert.severity.level} ${alert.is_historical ? 'historical' : ''}`}
                     onClick={() => {
                       if (onSelectStation && alert.station.id) {
                         onSelectStation(alert.station.id);
+                        onToggle();
                       }
                     }}
                   >
-                    {/* Top Row: Type Badge + Severity Pill */}
+                    {/* Top Row: Type Badge + Severity Badge */}
                     <div className="alert-card-top">
                       <div className="alert-type-pill-wrap">
-                        <span
-                          className={`alert-type-indicator ${isObs ? 'obs' : 'pred'}`}
-                        >
-                          {isObs ? '● Observed Reading' : '🔮 5-Day Forecast'}
+                        <span className={`alert-type-indicator ${isObs ? 'obs' : 'pred'}`}>
+                          {isObs ? '● Observed Ground Data' : '🔮 5-Day ML Forecast'}
                         </span>
                         {alert.is_historical && (
                           <span className="alert-hist-tag">HISTORICAL EVENT</span>
@@ -247,6 +263,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
                       <div className="alert-metric-box">
                         <span className="metric-box-label">Exceeding Pollutant:</span>
                         <button
+                          type="button"
                           className="metric-box-val-btn"
                           onClick={(e) => {
                             e.stopPropagation();
@@ -274,27 +291,48 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
                         </button>
                       </div>
 
-                      {alert.pollutant.sub_index != null && (
+                      {hasValidSubIndex ? (
                         <div className="alert-subindex-box">
                           <span className="subindex-label">CPCB Sub-Index:</span>
                           <span className="subindex-val">{alert.pollutant.sub_index}</span>
                         </div>
+                      ) : (
+                        <div className="alert-subindex-box unavailable">
+                          <span className="subindex-label">CPCB Sub-Index:</span>
+                          <span className="subindex-val-unavailable">Sub-index unavailable</span>
+                        </div>
                       )}
 
-                      {!isObs && alert.pollutant.lower_bound != null && alert.pollutant.upper_bound != null && (
-                        <div className="alert-ci-box">
-                          <span className="ci-label">Forecast CI Range:</span>
-                          <span className="ci-val font-mono">
-                            {alert.pollutant.lower_bound} – {alert.pollutant.upper_bound} µg/m³
-                          </span>
-                        </div>
+                      {!isObs && (
+                        alert.pollutant.lower_bound != null && alert.pollutant.upper_bound != null ? (
+                          <div className="alert-ci-box">
+                            <span className="ci-label">Forecast CI:</span>
+                            <span className="ci-val font-mono">
+                              {alert.pollutant.lower_bound} – {alert.pollutant.upper_bound} µg/m³
+                            </span>
+                          </div>
+                        ) : null
                       )}
                     </div>
 
-                    {/* Rule Triggered Description */}
+                    {/* Explanation section: Clear non-technical trigger explanation */}
                     <div className="alert-rule-desc">
-                      <span className="rule-icon">⚖</span>
-                      <span>{alert.rule_triggered}</span>
+                      <span className="rule-icon" aria-hidden="true">⚠️</span>
+                      <div className="rule-content">
+                        <div className="rule-heading">
+                          <strong>Exceeded Threshold:</strong> {alert.rule_triggered}
+                        </div>
+                        <div className="rule-detail">
+                          {isObs
+                            ? 'Based on authentic ground telemetry recorded by CPCB/OpenAQ sensors.'
+                            : `Predicted by ${alert.provenance.model_name || 'machine learning ensemble'} based on historic patterns.`}
+                          {alert.severity.health_implication && (
+                            <span className="rule-health-note">
+                              {' '}Impact: {alert.severity.health_implication}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </div>
 
                     {/* Footer: Provenance & Timestamps */}
@@ -302,35 +340,44 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
                       <div className="alert-provenance-text">
                         {isObs ? (
                           <>
-                            Provider: <strong>{alert.provenance.provider}</strong> · Recorded:{' '}
-                            {alert.provenance.recorded_at
-                              ? new Date(alert.provenance.recorded_at).toLocaleTimeString('en-IN', {
-                                  hour: '2-digit',
-                                  minute: '2-digit',
-                                })
-                              : 'Ground Sensor'}
+                            <span>Provider: <strong>{alert.provenance.provider}</strong></span>
+                            <span className="footer-dot">·</span>
+                            <span>Recorded:{' '}
+                              <strong>
+                                {alert.provenance.recorded_at
+                                  ? new Date(alert.provenance.recorded_at).toLocaleTimeString('en-IN', {
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                    })
+                                  : 'Ground Sensor'}
+                              </strong>
+                            </span>
                           </>
                         ) : (
                           <>
-                            Model: <strong>{alert.provenance.model_name}</strong> · Target:{' '}
-                            <strong>{alert.provenance.target_date}</strong>
+                            <span>Model: <strong>{alert.provenance.model_name}</strong></span>
+                            <span className="footer-dot">·</span>
+                            <span>Target Date: <strong>{alert.provenance.target_date}</strong></span>
                           </>
                         )}
                       </div>
 
                       <button
+                        type="button"
                         className="btn-locate-station"
                         onClick={(e) => {
                           e.stopPropagation();
                           if (onSelectStation && alert.station.id) {
                             onSelectStation(alert.station.id);
+                            onToggle();
                           }
                         }}
+                        title={`Locate ${alert.station.name} on the map`}
                       >
                         Locate on Map →
                       </button>
                     </div>
-                  </div>
+                  </article>
                 );
               })}
             </div>
@@ -340,9 +387,9 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
         {/* Panel Footer */}
         <div className="alert-panel-footer">
           <span className="footer-rule-notice">
-            CPCB NAQI Standards · Model: <strong>{selectedModel}</strong> · Live Ground Readings &amp; 5-Day Forecasts
+            CPCB NAQI Standards · Model: <strong>{selectedModel}</strong> · Verified Provenance
           </span>
-          <button className="btn-close-alert-footer" onClick={onToggle}>
+          <button type="button" className="btn-close-alert-footer" onClick={onToggle}>
             Done
           </button>
         </div>

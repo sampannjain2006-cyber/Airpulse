@@ -463,9 +463,9 @@ export const RoutePlanningDrawer: React.FC<RoutePlanningDrawerProps> = ({
                                   severityCategory: route.pollution_analysis.severity?.category,
                                 });
                               }}
-                              title="Open in Google Maps or draft calendar trip"
+                              title="Draft in Google Calendar or Google Tasks"
                             >
-                              <span>🌐 Google Maps / Services Handoff</span>
+                              <span>📅 Google Calendar &amp; Tasks Handoff</span>
                               <span style={{ opacity: 0.7, fontSize: '0.7rem' }}>↗</span>
                             </button>
                           )}

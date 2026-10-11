@@ -17,7 +17,6 @@ interface OverviewViewProps {
   historySample: HistoryObservation[];
   onNavigate: (view: AppView) => void;
   onSelectStation: (station: Station) => void;
-  onOpenLookup: () => void;
   onOpenRegistry: () => void;
   onOpenPollutantInfo: (pollutantId: string) => void;
 }
@@ -30,7 +29,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   historySample,
   onNavigate,
   onSelectStation,
-  onOpenLookup,
   onOpenRegistry,
   onOpenPollutantInfo,
 }) => {
@@ -68,9 +66,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </button>
             <button className="nature-btn nature-btn-secondary" onClick={() => onNavigate('forecast')}>
               <span>5-Day Forecasts</span>
-            </button>
-            <button className="nature-btn nature-btn-ghost" onClick={onOpenLookup}>
-              <span>Address Lookup</span>
             </button>
           </div>
         </div>

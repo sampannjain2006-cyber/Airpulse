@@ -1,12 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { listSupportedPollutants, getCatalogItem } from '../utils/pollutantCatalog';
 import type { PollutantCatalogItem } from '../types/pollutant';
+
+type PollutantCategory = 'all' | 'particulate' | 'gas' | 'toxic';
 
 export const PollutantGuideView: React.FC = () => {
   const supported = listSupportedPollutants();
   const [selectedPollutantId, setSelectedPollutantId] = useState<string>('pm25');
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [activeCategory, setActiveCategory] = useState<PollutantCategory>('all');
 
-  const currentItem: PollutantCatalogItem | null = getCatalogItem(selectedPollutantId);
+  // Filtered pollutants based on search query and category
+  const filteredPollutants = useMemo(() => {
+    return supported.filter((p) => {
+      // Category filter
+      if (activeCategory === 'particulate') {
+        if (p.id !== 'pm25' && p.id !== 'pm10') return false;
+      } else if (activeCategory === 'gas') {
+        if (!['no2', 'so2', 'co', 'o3', 'nh3'].includes(p.id)) return false;
+      } else if (activeCategory === 'toxic') {
+        if (p.id !== 'pb') return false;
+      }
+
+      // Search query
+      if (!searchQuery.trim()) return true;
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        p.id.toLowerCase().includes(q) ||
+        p.symbol.toLowerCase().includes(q) ||
+        p.displayName.toLowerCase().includes(q) ||
+        p.shortDescription.toLowerCase().includes(q)
+      );
+    });
+  }, [supported, searchQuery, activeCategory]);
+
+  // Ensure selected pollutant is in the filtered list if available
+  const effectiveSelectedId = useMemo(() => {
+    if (filteredPollutants.some((p) => p.id === selectedPollutantId)) {
+      return selectedPollutantId;
+    }
+    return filteredPollutants.length > 0 ? filteredPollutants[0].id : '';
+  }, [filteredPollutants, selectedPollutantId]);
+
+  const currentItem: PollutantCatalogItem | null = effectiveSelectedId
+    ? getCatalogItem(effectiveSelectedId)
+    : null;
 
   return (
     <div className="nature-page-container pollutant-guide-page">
@@ -14,34 +52,101 @@ export const PollutantGuideView: React.FC = () => {
       <div className="guide-header">
         <div>
           <div className="guide-tag-row">
-            <span className="nature-tag green">EDUCATIONAL REFERENCE</span>
-            <span className="nature-tag teal">CPCB NAAQS &amp; WHO 2021</span>
+            <span className="nature-tag green">SCIENTIFIC REFERENCE CATALOG</span>
+            <span className="nature-tag teal">CPCB NAAQS &amp; WHO 2021 STANDARDS</span>
           </div>
-          <h1 className="page-heading">Ambient Pollutant Scientific Guide</h1>
+          <h1 className="page-heading">Ambient Pollutant Reference Catalog</h1>
           <p className="page-subheading">
-            Authoritative definitions, emission origins, regulatory exposure standards, and health implications
+            Authoritative definitions, emission origins, regulatory exposure thresholds, and public health impact profiles for criteria air pollutants.
           </p>
         </div>
       </div>
 
-      {/* Pollutant Tabs Bar */}
-      <div className="guide-pollutants-nav" role="tablist" aria-label="Select pollutant to view details">
-        {supported.map((p) => {
-          const isSelected = selectedPollutantId === p.id;
-          return (
-            <button
-              key={p.id}
-              role="tab"
-              aria-selected={isSelected}
-              className={`guide-nav-tab ${isSelected ? 'active' : ''}`}
-              onClick={() => setSelectedPollutantId(p.id)}
-            >
-              <span className="tab-symbol">{p.symbol}</span>
-              <span className="tab-name">{p.displayName.split('(')[0].trim()}</span>
-            </button>
-          );
-        })}
+      {/* Catalog Search & Category Filter Toolbar */}
+      <div className="catalog-search-toolbar">
+        <div className="catalog-search-input-wrap">
+          <span className="catalog-search-icon" aria-hidden="true">🔍</span>
+          <input
+            type="text"
+            className="catalog-search-input"
+            placeholder="Search pollutant by name, formula, or emission source..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search criteria pollutants catalog"
+          />
+        </div>
+
+        <div className="catalog-category-filters" role="group" aria-label="Filter pollutants by type">
+          <button
+            type="button"
+            className={`catalog-filter-chip ${activeCategory === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('all')}
+          >
+            All Pollutants ({supported.length})
+          </button>
+          <button
+            type="button"
+            className={`catalog-filter-chip ${activeCategory === 'particulate' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('particulate')}
+          >
+            Particulates (PM2.5, PM10)
+          </button>
+          <button
+            type="button"
+            className={`catalog-filter-chip ${activeCategory === 'gas' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('gas')}
+          >
+            Gaseous Pollutants (NO₂, SO₂, O₃, CO, NH₃)
+          </button>
+          <button
+            type="button"
+            className={`catalog-filter-chip ${activeCategory === 'toxic' ? 'active' : ''}`}
+            onClick={() => setActiveCategory('toxic')}
+          >
+            Toxic Elements (Lead Pb)
+          </button>
+        </div>
       </div>
+
+      {/* Pollutant Tabs Bar */}
+      {filteredPollutants.length > 0 ? (
+        <div className="guide-pollutants-nav" role="tablist" aria-label="Select criteria air pollutant">
+          {filteredPollutants.map((p) => {
+            const isSelected = effectiveSelectedId === p.id;
+            return (
+              <button
+                key={p.id}
+                role="tab"
+                aria-selected={isSelected}
+                className={`guide-nav-tab ${isSelected ? 'active' : ''}`}
+                onClick={() => setSelectedPollutantId(p.id)}
+              >
+                <span className="tab-symbol">{p.symbol}</span>
+                <span className="tab-name">{p.displayName.split('(')[0].trim()}</span>
+              </button>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="catalog-empty-state">
+          <div style={{ fontSize: '32px', marginBottom: '8px' }}>🔍</div>
+          <h3>No Criteria Pollutants Match Your Search</h3>
+          <p>
+            No catalog entries match <strong>&quot;{searchQuery}&quot;</strong> under the selected category filter.
+          </p>
+          <button
+            type="button"
+            className="google-btn-primary"
+            style={{ marginTop: '12px' }}
+            onClick={() => {
+              setSearchQuery('');
+              setActiveCategory('all');
+            }}
+          >
+            Reset Filters &amp; View All Pollutants
+          </button>
+        </div>
+      )}
 
       {currentItem && (
         <div className="guide-detail-layout">

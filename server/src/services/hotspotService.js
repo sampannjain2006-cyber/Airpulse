@@ -1,5 +1,6 @@
 import { findObservedHotspots, findForecastHotspots } from '../models/hotspotModel.js';
 import { getSeverity } from '../utils/severityEngine.js';
+import { getPool } from '../config/db.js';
 
 // 5-minute in-memory cache for computed hotspot results
 const hotspotCache = new Map();
@@ -46,8 +47,8 @@ function deriveClusterTitle(stations) {
   return `${primaryCity} & Neighboring Area Hotspot`;
 }
 
-// Allowed 5-day future forecast window
-const ALLOWED_FORECAST_DATES = [
+// Fallback 5-day future forecast window
+const DEFAULT_FORECAST_DATES = [
   '2026-10-03',
   '2026-10-04',
   '2026-10-05',
@@ -59,7 +60,7 @@ const ALLOWED_FORECAST_DATES = [
  * Retrieve geospatial pollution hotspots.
  *
  * @param {object} params
- * @param {string} [params.date='2026-10-02'] - Date (YYYY-MM-DD)
+ * @param {string} [params.date] - Date (YYYY-MM-DD)
  * @param {string} [params.mode='observed'] - 'live' | 'observed' | 'historical' | 'forecast'
  * @param {string} [params.model='weighted_ensemble'] - Prediction model if forecast mode
  * @param {number} [params.threshold=60.0] - Minimum PM2.5 threshold (µg/m³)
@@ -67,7 +68,7 @@ const ALLOWED_FORECAST_DATES = [
  * @param {number} [params.minStations=2] - Minimum distinct stations required
  */
 export async function getHotspots({
-  date = '2026-10-02',
+  date,
   mode = 'observed',
   model = 'weighted_ensemble',
   threshold = 60.0,
@@ -75,19 +76,67 @@ export async function getHotspots({
   minStations = 2,
 } = {}) {
   const normalizedMode = (mode === 'live' || mode === 'historical') ? 'observed' : mode.toLowerCase();
+  const pool = getPool();
+
+  let targetDate = date ? String(date).trim() : null;
+  let latestObsDate = null;
+
+  // Retrieve latest ground observation date from database if available
+  if (pool) {
+    try {
+      const { rows: latestRow } = await pool.query(
+        "SELECT MAX(CAST(recorded_at AT TIME ZONE 'Asia/Kolkata' AS date))::text as latest_date FROM environmental_observations WHERE pm25 IS NOT NULL"
+      );
+      if (latestRow.length > 0 && latestRow[0].latest_date) {
+        latestObsDate = latestRow[0].latest_date;
+      }
+    } catch (e) {
+      console.warn('[Hotspots] Failed to query latest observation date:', e.message);
+    }
+  }
+
+  // If in live mode or no date provided, default to the latest available ground observation date
+  if (normalizedMode === 'observed' && (mode === 'live' || !targetDate)) {
+    targetDate = latestObsDate || '2026-10-07';
+  }
+
+  // Handle forecast mode dates
+  let allowedForecastDates = [...DEFAULT_FORECAST_DATES];
+  if (normalizedMode === 'forecast' && pool) {
+    try {
+      const { rows: predDates } = await pool.query(
+        'SELECT DISTINCT CAST(prediction_date AS date)::text as pd FROM predictions ORDER BY 1 ASC'
+      );
+      if (predDates.length > 0) {
+        allowedForecastDates = predDates.map((r) => r.pd);
+      }
+    } catch (e) {
+      console.warn('[Hotspots] Failed to query prediction dates:', e.message);
+    }
+
+    if (!targetDate && allowedForecastDates.length > 0) {
+      targetDate = allowedForecastDates[0];
+    }
+  }
+
+  if (!targetDate) {
+    targetDate = '2026-10-07';
+  }
 
   // Validate date format YYYY-MM-DD
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
-    const err = new Error(`Invalid date format: '${date}'. Expected YYYY-MM-DD.`);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(targetDate)) {
+    const err = new Error(`Invalid date format: '${targetDate}'. Expected YYYY-MM-DD.`);
     err.statusCode = 400;
     throw err;
   }
 
-  // Enforce 5-Day forecast horizon restriction on backend
+  // Enforce forecast date validity
   if (normalizedMode === 'forecast') {
-    if (!ALLOWED_FORECAST_DATES.includes(date)) {
+    if (!allowedForecastDates.includes(targetDate)) {
+      const minDate = allowedForecastDates[0];
+      const maxDate = allowedForecastDates[allowedForecastDates.length - 1];
       const err = new Error(
-        `Forecast hotspots are strictly restricted to the 5-day future horizon (Day 1 to Day 5: ${ALLOWED_FORECAST_DATES[0]} to ${ALLOWED_FORECAST_DATES[ALLOWED_FORECAST_DATES.length - 1]}). Date '${date}' is beyond the allowed horizon.`
+        `Forecast hotspots are available for dates with valid ML predictions (${minDate} to ${maxDate}). Date '${targetDate}' is outside the available horizon.`
       );
       err.statusCode = 400;
       throw err;
@@ -100,16 +149,29 @@ export async function getHotspots({
 
   // Check cache
   cleanCache();
-  const cacheKey = `${normalizedMode}:${date}:${model}:${thresh}:${epsMeters}:${minPts}`;
+  const cacheKey = `${normalizedMode}:${targetDate}:${model}:${thresh}:${epsMeters}:${minPts}`;
   const cached = hotspotCache.get(cacheKey);
   if (cached && cached.expiresAt > Date.now()) {
     return { ...cached.data, cached: true };
   }
 
+  let totalObservationsOnDate = 0;
+  if (pool && normalizedMode !== 'forecast') {
+    try {
+      const { rows: countRows } = await pool.query(
+        "SELECT COUNT(*)::int as cnt FROM environmental_observations WHERE CAST(recorded_at AT TIME ZONE 'Asia/Kolkata' AS date) = $1 AND pm25 IS NOT NULL",
+        [targetDate]
+      );
+      totalObservationsOnDate = countRows[0]?.cnt || 0;
+    } catch (e) {
+      console.warn('[Hotspots] Failed to count observations on date:', e.message);
+    }
+  }
+
   let rawClusters = [];
   if (normalizedMode === 'forecast') {
     rawClusters = await findForecastHotspots({
-      dateStr: date,
+      dateStr: targetDate,
       modelName: model,
       threshold: thresh,
       epsMeters,
@@ -117,7 +179,7 @@ export async function getHotspots({
     });
   } else {
     rawClusters = await findObservedHotspots({
-      dateStr: date,
+      dateStr: targetDate,
       threshold: thresh,
       epsMeters,
       minStations: minPts,
@@ -145,10 +207,10 @@ export async function getHotspots({
     const visualRadius = Math.max(c.radius_meters || 0, 10000);
 
     return {
-      id: `hotspot-${normalizedMode}-${date}-${c.cluster_id ?? idx}`,
+      id: `hotspot-${normalizedMode}-${targetDate}-${c.cluster_id ?? idx}`,
       cluster_id: c.cluster_id,
       title,
-      date,
+      date: targetDate,
       mode: normalizedMode,
       data_type: isForecast ? 'predicted' : 'observed',
       data_type_label: isForecast
@@ -182,16 +244,30 @@ export async function getHotspots({
       model_name: isForecast ? model : null,
       source: isForecast
         ? `AIRPULSE ML Forecast (${model})`
-        : 'OpenAQ Ground Stations Telemetry',
+        : 'OpenAQ Ground Stations Observations',
       contributing_stations: c.stations,
       created_at: new Date().toISOString(),
     };
   });
 
+  let message;
+  if (processedHotspots.length === 0) {
+    if (normalizedMode === 'forecast') {
+      message = `No qualifying pollution hotspot clusters detected for forecast date ${targetDate} using model '${model}' (threshold: ≥ ${thresh} µg/m³ PM2.5, radius: ${epsMeters / 1000} km, min stations: ${minPts}).`;
+    } else if (totalObservationsOnDate === 0) {
+      message = `No ground observations recorded in the database for ${targetDate}. Latest available observations are from ${latestObsDate || 'N/A'}.`;
+    } else {
+      message = `No qualifying pollution hotspot clusters found on ${targetDate}. None of the ${totalObservationsOnDate} reporting stations met the clustering criteria (threshold: ≥ ${thresh} µg/m³ PM2.5 within ${epsMeters / 1000} km with ≥ ${minPts} stations).`;
+    }
+  }
+
   const response = {
     status: 'success',
     mode: normalizedMode,
-    date,
+    date: targetDate,
+    effective_date: targetDate,
+    latest_available_date: latestObsDate,
+    total_reporting_stations: totalObservationsOnDate,
     pollutant: 'pm25',
     pollutant_unit: 'µg/m³',
     config: {
@@ -205,9 +281,7 @@ export async function getHotspots({
     },
     hotspots_count: processedHotspots.length,
     hotspots: processedHotspots,
-    message: processedHotspots.length === 0
-      ? 'No qualifying pollution hotspots detected for the selected date.'
-      : undefined,
+    message,
   };
 
   hotspotCache.set(cacheKey, {

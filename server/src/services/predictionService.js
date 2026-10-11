@@ -114,7 +114,7 @@ export async function getStationForecast(stationIdParam, modelName = 'weighted_e
       last_observed: lastObs ? { date: lastObs.obs_date, value: lastObs.pm25 } : null,
       forecast: [],
       message: histDays < 14
-        ? `Prediction unavailable — insufficient historical telemetry (${histDays} days < 14 days required) up to reference date ${refDate}.`
+        ? `Prediction unavailable — insufficient historical observations (${histDays} days < 14 days required) up to reference date ${refDate}.`
         : `Prediction unavailable — no valid forecast generated for reference date ${refDate}.`,
       source: 'OpenAQ historical observations',
       prediction_type: 'ML forecast',

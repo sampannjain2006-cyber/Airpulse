@@ -20,7 +20,6 @@ import { ForecastsView } from '../views/ForecastsView';
 import { HotspotsView } from '../views/HotspotsView';
 import { PollutantGuideView } from '../views/PollutantGuideView';
 import { OpenAQRegistryView } from '../views/OpenAQRegistryView';
-import { GeoLookupView } from '../views/GeoLookupView';
 import { CampusSupportView } from '../views/CampusSupportView';
 
 import { PollutantInfoModal } from '../components/PollutantInfoModal';
@@ -44,13 +43,12 @@ const VALID_VIEWS: AppView[] = [
   'campus',
   'pollutants',
   'registry',
-  'coordinates',
 ];
 
 const getViewFromHash = (): AppView => {
   const hash = window.location.hash.replace('#', '').toLowerCase();
+  if (hash === 'catalog' || hash === 'reference-catalog' || hash === 'reference') return 'pollutants';
   if (hash === 'tools-registry' || hash === 'openaq') return 'registry';
-  if (hash === 'tools-lookup' || hash === 'geo' || hash === 'lookup') return 'coordinates';
   if (hash === 'campus' || hash === 'student-support' || hash === 'health') return 'campus';
   if (VALID_VIEWS.includes(hash as AppView)) {
     return hash as AppView;
@@ -89,6 +87,7 @@ export function Dashboard() {
   const [alertSummary, setAlertSummary] = useState<AlertSummaryResponse | null>(null);
   const [alertThreshold, setAlertThreshold] = useState<string>('poor');
   const [alertsLoading, setAlertsLoading] = useState<boolean>(false);
+  const [alertsError, setAlertsError] = useState<string | null>(null);
 
   // Context-Aware Precaution Recommendations (Feature 10)
   const [isRecModalOpen, setIsRecModalOpen] = useState<boolean>(false);
@@ -185,10 +184,10 @@ export function Dashboard() {
 
   // Google Services Integration (Feature 15)
   const [isGoogleModalOpen, setIsGoogleModalOpen] = useState<boolean>(false);
-  const [googleModalTab, setGoogleModalTab] = useState<'maps' | 'calendar' | 'tasks' | 'account'>('maps');
+  const [googleModalTab, setGoogleModalTab] = useState<'calendar' | 'tasks' | 'account'>('calendar');
   const [googleModalContext, setGoogleModalContext] = useState<GoogleContextPayload | null>(null);
 
-  const handleOpenGoogleServices = useCallback((context?: GoogleContextPayload, tab: 'maps' | 'calendar' | 'tasks' | 'account' = 'maps') => {
+  const handleOpenGoogleServices = useCallback((context?: GoogleContextPayload, tab: 'calendar' | 'tasks' | 'account' = 'calendar') => {
     setGoogleModalContext(context || null);
     setGoogleModalTab(tab);
     setIsGoogleModalOpen(true);
@@ -282,6 +281,7 @@ export function Dashboard() {
   useEffect(() => {
     let isCancelled = false;
     setAlertsLoading(true);
+    setAlertsError(null);
 
     Promise.all([
       alertsApi.list({
@@ -305,13 +305,16 @@ export function Dashboard() {
         setObservedAlerts(unified.observed?.alerts || []);
         setForecastAlerts(unified.forecast?.alerts || []);
         setAlertSummary(summaryRes);
+        setAlertsError(null);
         setAlertsLoading(false);
       })
       .catch((err) => {
         if (isCancelled) return;
-        console.warn('[Alerts] Fetch failed:', err instanceof Error ? err.message : err);
+        const errorMsg = err instanceof Error ? err.message : 'Telemetry server unavailable';
+        console.warn('[Alerts] Fetch failed:', errorMsg);
         setObservedAlerts([]);
         setForecastAlerts([]);
+        setAlertsError(errorMsg);
         setAlertsLoading(false);
       });
 
@@ -338,7 +341,6 @@ export function Dashboard() {
         stationCount={stations.length}
         activeReadingCount={activeObsCount}
         lastUpdatedText="Live Air Quality"
-        onOpenLookup={() => navigateToView('coordinates')}
         onOpenRegistry={() => navigateToView('registry')}
         onToggleAlerts={() => setIsAlertPanelOpen(!isAlertPanelOpen)}
         alertCount={totalAlertsCount}
@@ -362,7 +364,6 @@ export function Dashboard() {
             historySample={historySample}
             onNavigate={navigateToView}
             onSelectStation={(s) => setSelectedStation(s)}
-            onOpenLookup={() => navigateToView('coordinates')}
             onOpenRegistry={() => navigateToView('registry')}
             onOpenPollutantInfo={handleOpenPollutantInfo}
           />
@@ -415,6 +416,7 @@ export function Dashboard() {
             selectedHotspot={selectedHotspot}
             onSelectHotspot={setSelectedHotspot}
             stations={stations}
+            latestObservations={latestObs}
             onSelectStation={(s) => {
               setSelectedStation(s);
               navigateToView('live');
@@ -446,19 +448,6 @@ export function Dashboard() {
             onNavigateToLive={() => navigateToView('live')}
           />
         )}
-
-        {/* Dedicated Separate View: Lat / Lon Coordinates Lookup */}
-        {currentView === 'coordinates' && (
-          <GeoLookupView
-            onSelectStation={(id) => {
-              const s = stations.find((st) => st.id === id);
-              if (s) setSelectedStation(s);
-              navigateToView('live');
-            }}
-            onNavigateToLive={() => navigateToView('live')}
-            onOpenPollutantInfo={handleOpenPollutantInfo}
-          />
-        )}
       </main>
 
       {/* Authoritative Pollutant Information & Standards Modal (Feature 8) */}
@@ -480,6 +469,7 @@ export function Dashboard() {
         forecastAlerts={forecastAlerts}
         summary={alertSummary}
         loading={alertsLoading}
+        error={alertsError}
         selectedThreshold={alertThreshold}
         onSelectThreshold={setAlertThreshold}
         onSelectStation={(id) => {
@@ -555,7 +545,7 @@ export function Dashboard() {
         }}
         selectedRouteIndex={selectedRouteIdx}
         onSelectRouteIndex={(idx) => setSelectedRouteIdx(idx)}
-        onOpenGoogleServices={(ctx) => handleOpenGoogleServices(ctx, 'maps')}
+        onOpenGoogleServices={(ctx) => handleOpenGoogleServices(ctx, 'calendar')}
       />
 
       {/* Hidden button references ensuring backwards test compatibility */}

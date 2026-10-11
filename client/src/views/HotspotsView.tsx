@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import type { Hotspot } from '../types/hotspot';
 import type { Station } from '../types/station';
+import type { Observation } from '../types/observation';
 import { MapView } from '../components/MapView';
 import { formatValue } from '../utils/aqiUtils';
 import type { ContextualMeasurement } from '../types/pollutant';
+import { hotspotsApi } from '../api/hotspots';
 
 interface HotspotsViewProps {
   hotspots: Hotspot[];
   selectedHotspot: Hotspot | null;
   onSelectHotspot: (hotspot: Hotspot | null) => void;
   stations: Station[];
+  latestObservations?: Observation[];
   onSelectStation: (station: Station) => void;
   loading: boolean;
   selectedDate: string;
@@ -19,18 +22,81 @@ interface HotspotsViewProps {
 }
 
 export const HotspotsView: React.FC<HotspotsViewProps> = ({
-  hotspots,
+  hotspots: initialHotspots,
   selectedHotspot,
   onSelectHotspot,
   stations,
+  latestObservations = [],
   onSelectStation,
-  loading,
-  selectedDate,
-  mode,
+  loading: initialLoading,
+  selectedDate: initialSelectedDate,
+  mode: initialMode,
   selectedModel,
   onOpenPollutantInfo,
 }) => {
   const [activeTab, setActiveTab] = useState<'clusters' | 'algorithm'>('clusters');
+  const [currentMode, setCurrentMode] = useState<'live' | 'forecast'>(
+    initialMode === 'forecast' ? 'forecast' : 'live'
+  );
+  const [currentDate, setCurrentDate] = useState<string>(
+    initialHotspots[0]?.date || '2026-10-07'
+  );
+  const [activeHotspots, setActiveHotspots] = useState<Hotspot[]>(initialHotspots);
+  const [isLoading, setIsLoading] = useState<boolean>(initialLoading);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [backendMessage, setBackendMessage] = useState<string | null>(null);
+
+  // Sync with initialHotspots on first load or parent update
+  useEffect(() => {
+    if (initialHotspots && initialHotspots.length > 0) {
+      setActiveHotspots(initialHotspots);
+      if (initialHotspots[0]?.date) {
+        setCurrentDate(initialHotspots[0].date);
+      }
+    }
+  }, [initialHotspots]);
+
+  // Fetch hotspots for selected date and mode
+  const fetchHotspotsData = useCallback(async (modeToFetch: 'live' | 'forecast', dateToFetch?: string) => {
+    setIsLoading(true);
+    setFetchError(null);
+    try {
+      const res = await hotspotsApi.list({
+        mode: modeToFetch,
+        date: dateToFetch,
+        model: selectedModel,
+      });
+      setActiveHotspots(res.hotspots || []);
+      if (res.date) {
+        setCurrentDate(res.date);
+      }
+      setBackendMessage(res.message || null);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unable to load hotspot data from server';
+      setFetchError(msg);
+      setActiveHotspots([]);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedModel]);
+
+  const handleModeChange = (newMode: 'live' | 'forecast') => {
+    setCurrentMode(newMode);
+    onSelectHotspot(null);
+    if (newMode === 'live') {
+      fetchHotspotsData('live');
+    } else {
+      fetchHotspotsData('forecast', '2026-10-12');
+    }
+  };
+
+  const handleDateChange = (newDate: string) => {
+    setCurrentDate(newDate);
+    onSelectHotspot(null);
+    fetchHotspotsData(currentMode, newDate);
+  };
+
+  const displayDate = currentDate || initialSelectedDate;
 
   return (
     <div className="nature-page-container hotspots-page">
@@ -39,6 +105,8 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
         <div>
           <div className="hotspots-tag-row">
             <span className="nature-tag green">SPATIAL CLUSTERING</span>
+            <span className="nature-tag cyan">POSTGIS DBSCAN</span>
+            <span className="nature-tag purple">PM2.5 THRESHOLD ≥ 60 µg/m³</span>
           </div>
           <h1 className="page-heading">Geospatial Pollution Hotspots</h1>
           <p className="page-subheading">
@@ -49,9 +117,100 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
         <div className="hotspots-summary-pill">
           <span className="hotspot-pulse-dot" />
           <span className="summary-pill-text">
-            {loading ? 'Analyzing spatial density…' : `${hotspots.length} Clusters Detected`}
+            {isLoading ? 'Analyzing spatial density…' : `${activeHotspots.length} Clusters Detected`}
           </span>
-          <span className="summary-pill-date">({selectedDate})</span>
+          <span className="summary-pill-date">({displayDate})</span>
+        </div>
+      </div>
+
+      {/* Mode & Date Filter Controls */}
+      <div className="forecast-controls-card" style={{ marginBottom: '16px', padding: '12px 18px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <span style={{ fontSize: '12px', fontWeight: 700, color: '#74c69d', textTransform: 'uppercase' }}>
+              Data Mode:
+            </span>
+            <div style={{ display: 'flex', background: '#081c15', borderRadius: '8px', padding: '2px', border: '1px solid #2d6a4f' }}>
+              <button
+                type="button"
+                onClick={() => handleModeChange('live')}
+                style={{
+                  background: currentMode === 'live' ? '#2d6a4f' : 'transparent',
+                  color: currentMode === 'live' ? '#ffffff' : '#95d5b2',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                🌿 Ground Observations (Live)
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeChange('forecast')}
+                style={{
+                  background: currentMode === 'forecast' ? '#2d6a4f' : 'transparent',
+                  color: currentMode === 'forecast' ? '#ffffff' : '#95d5b2',
+                  border: 'none',
+                  borderRadius: '6px',
+                  padding: '6px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                }}
+              >
+                🔮 ML Forecast Clusters (5-Day)
+              </button>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <label htmlFor="hotspot-date-select" style={{ fontSize: '12px', fontWeight: 600, color: '#74c69d' }}>
+              Target Date:
+            </label>
+            {currentMode === 'live' ? (
+              <select
+                id="hotspot-date-select"
+                className="nature-input"
+                style={{ padding: '6px 10px', fontSize: '12px', minWidth: '180px' }}
+                value={currentDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+              >
+                <option value="2026-10-07">2026-10-07 (Latest Observations)</option>
+                <option value="2026-05-01">2026-05-01 (Historical)</option>
+                <option value="2026-04-30">2026-04-30 (Historical)</option>
+                <option value="2026-04-25">2026-04-25 (Historical)</option>
+              </select>
+            ) : (
+              <select
+                id="hotspot-date-select"
+                className="nature-input"
+                style={{ padding: '6px 10px', fontSize: '12px', minWidth: '180px' }}
+                value={currentDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+              >
+                <option value="2026-10-12">2026-10-12 (Forecast Day 1)</option>
+                <option value="2026-10-13">2026-10-13 (Forecast Day 2)</option>
+                <option value="2026-10-14">2026-10-14 (Forecast Day 3)</option>
+                <option value="2026-10-15">2026-10-15 (Forecast Day 4)</option>
+                <option value="2026-10-16">2026-10-16 (Forecast Day 5)</option>
+              </select>
+            )}
+
+            <button
+              type="button"
+              className="nature-btn secondary sm"
+              onClick={() => fetchHotspotsData(currentMode, currentDate)}
+              title="Refresh hotspot cluster analysis"
+              style={{ padding: '6px 10px', fontSize: '12px' }}
+            >
+              🔄 Refresh
+            </button>
+          </div>
         </div>
       </div>
 
@@ -61,7 +220,7 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
           className={`nature-tab-btn ${activeTab === 'clusters' ? 'active' : ''}`}
           onClick={() => setActiveTab('clusters')}
         >
-          <span>Detected Clusters ({hotspots.length})</span>
+          <span>Detected Clusters ({activeHotspots.length})</span>
         </button>
         <button
           className={`nature-tab-btn ${activeTab === 'algorithm' ? 'active' : ''}`}
@@ -71,23 +230,42 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
         </button>
       </div>
 
+      {fetchError && (
+        <div className="nature-alert error" role="alert" style={{ marginBottom: '16px' }}>
+          <span className="alert-icon">⚠️</span>
+          <div style={{ flex: 1 }}>
+            <strong>Unable to load hotspot data</strong>
+            <p style={{ margin: '4px 0 0 0', fontSize: '12px' }}>{fetchError}</p>
+          </div>
+          <button
+            type="button"
+            className="nature-btn secondary sm"
+            onClick={() => fetchHotspotsData(currentMode, currentDate)}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       {activeTab === 'clusters' ? (
         <div className="hotspots-content-layout">
           {/* Left Column: Cluster Cards */}
           <aside className="hotspots-list-column">
             <div className="hotspot-list-heading">
-              <span>Clusters on {selectedDate}</span>
-              <span className="mode-badge">{mode === 'forecast' ? `Forecast (${selectedModel})` : 'Live Readings'}</span>
+              <span>Clusters on {displayDate}</span>
+              <span className="mode-badge">
+                {currentMode === 'forecast' ? `ML Forecast (${selectedModel})` : 'Ground Measured'}
+              </span>
             </div>
 
             <div className="hotspots-scroll-area">
-              {loading ? (
+              {isLoading ? (
                 <div className="hotspots-loading-state">
                   <div className="hotspots-loading-spinner" />
-                  <p>Analyzing regional pollution patterns…</p>
+                  <p>Analyzing regional pollution patterns with PostGIS DBSCAN…</p>
                 </div>
-              ) : hotspots.length > 0 ? (
-                hotspots.map((hs) => {
+              ) : activeHotspots.length > 0 ? (
+                activeHotspots.map((hs) => {
                   const isSelected = selectedHotspot?.id === hs.id;
                   return (
                     <article
@@ -154,7 +332,9 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
                             >
                               <span className="station-name-text">{st.name}</span>
                               <span className="station-pm-text">{Math.round(st.pm25)} µg/m³</span>
-                              <span className="station-dist-text">({Math.round(st.dist_to_center_km)} km)</span>
+                              {st.dist_to_center_km != null && (
+                                <span className="station-dist-text">({Math.round(st.dist_to_center_km)} km)</span>
+                              )}
                             </div>
                           ))}
                         </div>
@@ -165,13 +345,17 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
               ) : (
                 <div className="hotspots-empty-state">
                   <span className="empty-icon">🍃</span>
-                  <h3>No Severe Clusters Detected</h3>
+                  <h3>No Qualifying Clusters Found</h3>
                   <p>
-                    On <strong>{selectedDate}</strong>, no contiguous group of $\ge 2$ stations within 40km exceeded
-                    the elevated particulate threshold ($\ge 60$ µg/m³).
+                    {backendMessage || (
+                      <>
+                        On <strong>{displayDate}</strong>, no contiguous group of ≥ 2 stations within 40 km exceeded
+                        the elevated particulate threshold (≥ 60 µg/m³ PM2.5).
+                      </>
+                    )}
                   </p>
                   <span className="empty-subtext">
-                    This indicates acceptable air dispersal or sparse localized station readings.
+                    This indicates acceptable air dispersal or sparse localized station readings across the evaluated spatial radius.
                   </span>
                 </div>
               )}
@@ -183,15 +367,15 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
             <div className="hotspots-map-container">
               <MapView
                 stations={stations}
-                latestObservations={[]}
+                latestObservations={latestObservations}
                 selectedStation={null}
                 onSelectStation={onSelectStation}
-                mode={mode}
-                selectedDate={selectedDate}
-                hotspots={hotspots}
+                mode={currentMode}
+                selectedDate={displayDate}
+                hotspots={activeHotspots}
                 selectedHotspot={selectedHotspot}
                 onSelectHotspot={onSelectHotspot}
-                height={460}
+                height={480}
               />
             </div>
 
@@ -201,7 +385,7 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
                   <span className="cluster-num">Cluster #{selectedHotspot.cluster_id}</span>
                   <span className="cluster-title">{selectedHotspot.title}</span>
                   <span className="cluster-coords">
-                    Center: {selectedHotspot.center.latitude.toFixed(4)}°N, {selectedHotspot.center.longitude.toFixed(4)}°E
+                    Center: {selectedHotspot.center.latitude.toFixed(4)}°N, {selectedHotspot.center.longitude.toFixed(4)}°E · Radius: {Math.round(selectedHotspot.actual_cluster_radius_meters / 1000)} km
                   </span>
                 </div>
                 <button className="banner-dismiss-btn" onClick={() => onSelectHotspot(null)}>
@@ -218,7 +402,7 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
             <span className="methodology-icon">📐</span>
             <div>
               <h2>Regional Density-Based Spatial Clustering</h2>
-              <p>Density-Based Spatial Clustering of Applications with Noise (DBSCAN)</p>
+              <p>PostGIS ST_ClusterDBSCAN (EPSG:3857 Metric Web Mercator Projection)</p>
             </div>
           </div>
 
@@ -227,7 +411,7 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
               <span className="step-num">01</span>
               <h3>Elevated Concentration Filter</h3>
               <p>
-                Only monitoring stations reporting <strong>PM2.5 $\ge 60$ µg/m³</strong> (the CPCB 24-hr NAAQS limit)
+                Only monitoring stations reporting <strong>PM2.5 ≥ 60 µg/m³</strong> (the CPCB 24-hr NAAQS limit)
                 are admitted into the clustering candidate set. Stations below this threshold are treated as non-elevated background.
               </p>
             </div>
@@ -236,7 +420,7 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
               <span className="step-num">02</span>
               <h3>Spatial Distance Metric (Epsilon)</h3>
               <p>
-                Epsilon is parameterized at <strong>$\varepsilon = 40,000$ meters (40 km)</strong> using ellipsoidal
+                Epsilon is parameterized at <strong>ε = 40,000 meters (40 km)</strong> using ellipsoidal
                 geodetic distance with a clustering radius threshold of 40 km and a minimum of 2 stations.
               </p>
             </div>
@@ -245,7 +429,7 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
               <span className="step-num">03</span>
               <h3>Minimum Station Density (MinPoints)</h3>
               <p>
-                A valid regional cluster requires a minimum of <strong>$\ge 2$ distinct ground stations</strong> within
+                A valid regional cluster requires a minimum of <strong>≥ 2 distinct ground stations</strong> within
                 the 40 km neighborhood. Isolated single-station spikes are classified as localized noise and excluded.
               </p>
             </div>
@@ -254,7 +438,7 @@ export const HotspotsView: React.FC<HotspotsViewProps> = ({
               <span className="step-num">04</span>
               <h3>Cluster Center &amp; Severity Scoring</h3>
               <p>
-                The cluster centroid is computed via `ST_Centroid(ST_Collect(geom))`.
+                The cluster centroid is computed via <code>ST_Centroid(ST_Collect(geom))</code>.
                 Severity scoring incorporates average PM2.5 scaled logarithmically by station count:
                 <code>Score = Avg(PM2.5) × (1 + log₂(N))</code>.
               </p>

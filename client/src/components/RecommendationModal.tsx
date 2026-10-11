@@ -118,11 +118,12 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
       onClick={onClose}
       role="dialog"
       aria-modal="true"
-      aria-label="Context-Aware Precaution Recommendations"
+      aria-labelledby="rec-modal-title"
+      aria-describedby="rec-modal-description"
     >
       <div className="rec-modal-panel" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
-        <div className="rec-modal-header">
+        <header className="rec-modal-header">
           <div className="rec-header-left">
             <div className="rec-badge-row">
               <span className="rec-tag">PUBLIC HEALTH GUIDANCE</span>
@@ -146,13 +147,16 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
                   : '● OBSERVED AIR QUALITY'}
               </span>
             </div>
-            <h2 className="rec-title">Health Precautions &amp; Actions</h2>
-            <p className="rec-subtitle">
+            <h2 className="rec-title" id="rec-modal-title">
+              Health Precautions &amp; Actions
+            </h2>
+            <p className="rec-subtitle" id="rec-modal-description">
               Verified exposure-reduction guidance based on CPCB NAQI &amp; WHO health guidelines
             </p>
           </div>
 
           <button
+            type="button"
             className="btn-close-rec-modal"
             onClick={onClose}
             title="Close precautions modal (Esc)"
@@ -160,25 +164,37 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
           >
             ✕
           </button>
-        </div>
+        </header>
 
-        {/* Context Status Bar */}
-        <div className="rec-context-bar">
-          <div className="rec-context-item">
-            <span className="rec-context-label">Location:</span>
-            <strong className="rec-context-val">
+        {/* Location & Context Summary Bar */}
+        <div
+          className="rec-context-bar"
+          role="region"
+          aria-label="Monitoring Station and Pollutant Summary"
+        >
+          <div className="rec-context-card">
+            <span className="rec-context-label">
+              <span className="rec-context-icon" aria-hidden="true">📍</span> Monitoring Station
+            </span>
+            <strong
+              className="rec-context-val"
+              title={station ? `${station.name}, ${station.city}, ${station.state}` : 'Active Selection'}
+            >
               {station ? `${station.name} (${station.city})` : 'Active Selection / Regional'}
             </strong>
           </div>
 
-          <div className="rec-context-item">
-            <label htmlFor="rec-pollutant-dropdown" className="rec-context-label">Evaluating Pollutant:</label>
+          <div className="rec-context-card">
+            <label htmlFor="rec-pollutant-dropdown" className="rec-context-label">
+              <span className="rec-context-icon" aria-hidden="true">🔬</span> Evaluated Pollutant
+            </label>
             <select
               id="rec-pollutant-dropdown"
               className="rec-pollutant-select"
               value={selectedMetric}
               onChange={(e) => setSelectedMetric(e.target.value)}
               title="Switch evaluated atmospheric pollutant"
+              aria-label="Select evaluated atmospheric pollutant"
             >
               <option value="pm25">PM2.5 (Fine Particulates)</option>
               <option value="pm10">PM10 (Coarse Particulates)</option>
@@ -190,25 +206,37 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
           </div>
 
           {context?.severity && (
-            <div
-              className="rec-severity-pill"
-              style={{
-                backgroundColor: context.severity.bg_color,
-                borderColor: context.severity.color,
-                color: context.severity.color,
-              }}
-            >
-              <span
-                className="rec-severity-dot"
-                style={{ backgroundColor: context.severity.color }}
-              />
-              <strong>{context.severity.category.toUpperCase()}</strong>
-              <span>Tier {context.severity.level}/6</span>
+            <div className="rec-context-card severity-card">
+              <span className="rec-context-label">
+                <span className="rec-context-icon" aria-hidden="true">🛡️</span> Air Quality Severity
+              </span>
+              <div
+                className={`rec-severity-pill tier-${context.severity.level}`}
+                style={{
+                  backgroundColor: context.severity.bg_color,
+                  borderColor: context.severity.color,
+                }}
+              >
+                <span
+                  className="rec-severity-dot"
+                  style={{ backgroundColor: context.severity.color }}
+                  aria-hidden="true"
+                />
+                <strong
+                  className="rec-severity-name"
+                  style={{ color: context.severity.color }}
+                >
+                  {context.severity.category.toUpperCase()}
+                </strong>
+                <span className="rec-severity-tier">Tier {context.severity.level}/6</span>
+              </div>
             </div>
           )}
 
-          <div className="rec-context-item">
-            <span className="rec-context-label">Time Horizon:</span>
+          <div className="rec-context-card">
+            <span className="rec-context-label">
+              <span className="rec-context-icon" aria-hidden="true">⏱️</span> Time Horizon
+            </span>
             <span className="rec-context-val font-mono">
               {isForecast
                 ? `Forecast: ${selectedDate} (${selectedModel})`
@@ -226,9 +254,9 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
 
         {/* Historical Notice */}
         {isHistorical && (
-          <div className="rec-historical-notice">
-            <span className="hist-icon">ℹ</span>
-            <div>
+          <div className="rec-historical-notice" role="note">
+            <span className="hist-icon" aria-hidden="true">ℹ</span>
+            <div className="hist-text-wrap">
               <strong>Historical Analysis Mode ({selectedDate}):</strong>
               <span>
                 {' '}These recommendations reflect verified criteria that applied to conditions on this past date. They do not constitute current active health alerts.
@@ -238,7 +266,11 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
         )}
 
         {/* Target Audience Filters */}
-        <div className="rec-audience-tabs" role="tablist">
+        <div
+          className="rec-audience-tabs"
+          role="tablist"
+          aria-label="Filter recommendations by target demographic"
+        >
           {[
             { id: 'all', label: 'All Audiences' },
             { id: 'general_public', label: 'General Public' },
@@ -247,6 +279,7 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
           ].map((tab) => (
             <button
               key={tab.id}
+              type="button"
               className={`rec-tab-btn ${selectedAudience === tab.id ? 'active' : ''}`}
               onClick={() => setSelectedAudience(tab.id)}
               role="tab"
@@ -260,12 +293,12 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
         {/* Content Body */}
         <div className="rec-modal-body">
           {loading ? (
-            <div className="rec-loading-state">
+            <div className="rec-loading-state" role="status">
               <div className="pulse-indicator healthy" style={{ margin: '0 auto 12px auto' }} />
               <span>Evaluating environmental severity against authoritative public health rules…</span>
             </div>
           ) : error ? (
-            <div className="rec-error-state">
+            <div className="rec-error-state" role="alert">
               <span className="error-icon" aria-hidden="true">⚠️</span>
               <h4>Unable to Retrieve Recommendations</h4>
               <p>{error}</p>
@@ -287,12 +320,12 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
               {recommendations.map((rec) => {
                 const isHighPriority = rec.priority === 1;
                 return (
-                  <div
+                  <article
                     key={rec.id}
                     className={`rec-card priority-${rec.priority} ${isHighPriority ? 'high-priority' : ''}`}
                   >
                     {/* Card Top Row */}
-                    <div className="rec-card-top">
+                    <header className="rec-card-top">
                       <div className="rec-priority-wrap">
                         <span className={`rec-priority-badge p${rec.priority}`}>
                           {rec.priority === 1
@@ -319,51 +352,75 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
                             onOpenPollutantInfo(selectedMetric);
                           }
                         }}
-                        title={onOpenPollutantInfo ? `Click to inspect authoritative definitions for ${rec.applicable_pollutant}` : undefined}
+                        role={onOpenPollutantInfo ? 'button' : undefined}
+                        tabIndex={onOpenPollutantInfo ? 0 : undefined}
+                        onKeyDown={(e) => {
+                          if (onOpenPollutantInfo && (e.key === 'Enter' || e.key === ' ')) {
+                            e.preventDefault();
+                            onOpenPollutantInfo(selectedMetric);
+                          }
+                        }}
+                        title={
+                          onOpenPollutantInfo
+                            ? `Click to inspect authoritative definitions for ${rec.applicable_pollutant}`
+                            : undefined
+                        }
                       >
                         {rec.applicable_pollutant} {onOpenPollutantInfo ? 'ⓘ' : ''}
                       </span>
-                    </div>
+                    </header>
 
-                    {/* Card Title & Explanation */}
-                    <h4 className="rec-card-title">{rec.title}</h4>
-                    <p className="rec-card-explanation">{rec.explanation}</p>
+                    {/* Card Title & Recommended Action */}
+                    <div className="rec-card-body-content">
+                      <h3 className="rec-card-title">{rec.title}</h3>
+                      <div className="rec-action-container">
+                        <span className="rec-action-label">Recommended Action:</span>
+                        <p className="rec-card-explanation">{rec.explanation}</p>
+                      </div>
+                    </div>
 
                     {/* Rationale & Trigger Box */}
                     <div className="rec-rationale-box">
                       <div className="rationale-item">
-                        <strong>Why This Applies:</strong> {rec.rationale}
+                        <strong className="rationale-heading">Why This Applies:</strong>
+                        <span className="rationale-desc">{rec.rationale}</span>
                       </div>
                       <div className="trigger-item">
-                        <strong>Trigger Condition:</strong> {rec.trigger_description}
+                        <strong className="trigger-heading">Trigger Condition:</strong>
+                        <span className="trigger-desc">{rec.trigger_description}</span>
                       </div>
                     </div>
 
                     {/* Scope & Limitation Disclaimer */}
                     {rec.disclaimer && (
-                      <div className="rec-disclaimer-box">
-                        <span className="disclaimer-icon" aria-hidden="true">⚠️</span>
-                        <span>{rec.disclaimer}</span>
+                      <div className="rec-disclaimer-box" role="alert">
+                        <div className="disclaimer-header-row">
+                          <span className="disclaimer-icon" aria-hidden="true">⚠️</span>
+                          <strong className="disclaimer-heading">CRITICAL SAFETY LIMITATION</strong>
+                        </div>
+                        <p className="disclaimer-text">{rec.disclaimer}</p>
                       </div>
                     )}
 
                     {/* Footer: Source Link & Citation */}
-                    <div className="rec-card-footer">
+                    <footer className="rec-card-footer">
                       <div className="rec-source-citation">
-                        Source: <strong>{rec.source.name}</strong> ·{' '}
-                        <em>{rec.source.document}</em>
+                        <span className="rec-source-prefix">Authoritative Source:</span>{' '}
+                        <strong className="rec-source-name">{rec.source.name}</strong> ·{' '}
+                        <span className="rec-source-doc">{rec.source.document}</span>
                       </div>
                       <a
                         href={rec.source.url}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="rec-source-link"
-                        title={`Inspect authoritative reference at ${rec.source.url}`}
+                        title={`Inspect authoritative reference from ${rec.source.name}`}
                       >
-                        Authoritative Source ↗
+                        <span>Official Reference</span>
+                        <span aria-hidden="true">↗</span>
                       </a>
-                    </div>
-                  </div>
+                    </footer>
+                  </article>
                 );
               })}
             </div>
@@ -371,14 +428,17 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
         </div>
 
         {/* Modal Footer */}
-        <div className="rec-modal-footer">
+        <footer className="rec-modal-footer">
           <div className="rec-footer-disclaimer">
-            <span>⚖ <strong>Regulatory &amp; Medical Scope:</strong> Recommendations are educational guidelines derived from published CPCB and WHO criteria. They do not constitute personalized medical diagnosis or treatment.</span>
+            <span className="disclaimer-symbol" aria-hidden="true">⚖</span>
+            <span>
+              <strong>Regulatory &amp; Medical Scope:</strong> Recommendations are educational guidelines derived from published CPCB and WHO criteria. They do not constitute personalized medical diagnosis or treatment.
+            </span>
           </div>
-          <button className="btn-done-rec" onClick={onClose}>
+          <button type="button" className="btn-done-rec" onClick={onClose}>
             Done
           </button>
-        </div>
+        </footer>
       </div>
     </div>
   );

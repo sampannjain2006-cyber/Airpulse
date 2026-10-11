@@ -451,105 +451,107 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
 
       {/* 4. Controls Bar: State, City, Search, Pollutant, Model Architecture */}
       <div className="forecast-controls-card">
-        <div className="forecast-filters-grid">
-          {/* State Filter (All 28 States & 8 UTs) */}
-          <div className="forecast-filter-group">
-            <label htmlFor="forecast-state-filter" className="forecast-filter-label">
-              Administrative State / UT
-            </label>
-            <select
-              id="forecast-state-filter"
-              className="forecast-filter-control"
-              value={selectedState}
-              onChange={(e) => {
-                setSelectedState(e.target.value);
-                setSelectedCity(''); // Reset dependent city when state changes
-              }}
-            >
-              <option value="">All India (All States &amp; UTs)</option>
-              {ALL_INDIAN_STATES_AND_UTS.map((st) => {
-                const count = stateStationCounts[st] || 0;
-                return (
-                  <option key={st} value={st}>
-                    {st} {count > 0 ? `(${count} stations)` : '(No active stations)'}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
+        <div className="forecast-filters-toolbar">
+          {/* Row 1: Administrative State/UT and Target City */}
+          <div className="forecast-filters-row">
+            <div className="forecast-filter-group">
+              <label htmlFor="forecast-state-filter" className="forecast-filter-label">
+                Administrative State / UT
+              </label>
+              <select
+                id="forecast-state-filter"
+                className="forecast-filter-control"
+                value={selectedState}
+                onChange={(e) => {
+                  setSelectedState(e.target.value);
+                  setSelectedCity(''); // Reset dependent city when state changes
+                }}
+              >
+                <option value="">All India (All States &amp; UTs)</option>
+                {ALL_INDIAN_STATES_AND_UTS.map((st) => {
+                  const count = stateStationCounts[st] || 0;
+                  return (
+                    <option key={st} value={st}>
+                      {st} {count > 0 ? `(${count} stations)` : '(No active stations)'}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
 
-          {/* Dependent City Filter */}
-          <div className="forecast-filter-group">
-            <label htmlFor="forecast-city-filter" className="forecast-filter-label">
-              Target City
-            </label>
-            <select
-              id="forecast-city-filter"
-              className="forecast-filter-control"
-              value={selectedCity}
-              onChange={(e) => setSelectedCity(e.target.value)}
-              disabled={availableCities.length === 0}
-            >
-              <option value="">
-                {selectedState
-                  ? `All Cities in ${selectedState}`
-                  : 'All Cities in India'}
-              </option>
-              {availableCities.map((city) => (
-                <option key={city} value={city}>
-                  {city}
+            <div className="forecast-filter-group">
+              <label htmlFor="forecast-city-filter" className="forecast-filter-label">
+                Target City
+              </label>
+              <select
+                id="forecast-city-filter"
+                className="forecast-filter-control"
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                disabled={availableCities.length === 0}
+              >
+                <option value="">
+                  {selectedState
+                    ? `All Cities in ${selectedState}`
+                    : 'All Cities in India'}
                 </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Search Box */}
-          <div className="forecast-filter-group">
-            <label htmlFor="forecast-search-input" className="forecast-filter-label">
-              Search Station or City
-            </label>
-            <div className="forecast-search-wrapper">
-              <span className="forecast-search-icon" aria-hidden="true">🔍</span>
-              <input
-                id="forecast-search-input"
-                type="text"
-                className="forecast-filter-control search-input"
-                placeholder="Search station, city, code..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  className="forecast-search-clear-btn"
-                  onClick={() => setSearchQuery('')}
-                  aria-label="Clear search query"
-                >
-                  ✕
-                </button>
-              )}
+                {availableCities.map((city) => (
+                  <option key={city} value={city}>
+                    {city}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* Pollutant Selector */}
-          <div className="forecast-filter-group">
-            <label htmlFor="forecast-pollutant-dropdown" className="forecast-filter-label">
-              Forecast Pollutant
-            </label>
-            <select
-              id="forecast-pollutant-dropdown"
-              className="forecast-filter-control"
-              value={selectedPollutant}
-              onChange={(e) => setSelectedPollutant(e.target.value)}
-            >
-              <option value="pm25">PM2.5 (Fine Particulates, 24h Average)</option>
-              <option value="pm10" disabled>
-                PM10 (Training in Progress)
-              </option>
-              <option value="no2" disabled>
-                NO₂ (Training in Progress)
-              </option>
-            </select>
+          {/* Row 2: Search Station or City and Forecast Pollutant */}
+          <div className="forecast-filters-row">
+            <div className="forecast-filter-group">
+              <label htmlFor="forecast-search-input" className="forecast-filter-label">
+                Search Station or City
+              </label>
+              <div className="forecast-search-wrapper">
+                <span className="forecast-search-icon" aria-hidden="true">🔍</span>
+                <input
+                  id="forecast-search-input"
+                  type="text"
+                  className="forecast-filter-control search-input"
+                  placeholder="Search station, city, code..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className="forecast-search-clear-btn"
+                    onClick={() => setSearchQuery('')}
+                    aria-label="Clear search query"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="forecast-filter-group">
+              <label htmlFor="forecast-pollutant-dropdown" className="forecast-filter-label">
+                Forecast Pollutant
+              </label>
+              <select
+                id="forecast-pollutant-dropdown"
+                className="forecast-filter-control"
+                value={selectedPollutant}
+                onChange={(e) => setSelectedPollutant(e.target.value)}
+              >
+                <option value="pm25">PM2.5 (Fine Particulates, 24h Average)</option>
+                <option value="pm10" disabled>
+                  PM10 (Training in Progress)
+                </option>
+                <option value="no2" disabled>
+                  NO₂ (Training in Progress)
+                </option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -830,8 +832,12 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
         )}
       </section>
 
-      {/* 8. Multi-Model Benchmark Comparison Table */}
-      <section className="forecast-benchmark-section">
+      {/* 8. ML Validation Benchmark / Multi-Model Performance Comparison (Positioned at Bottom of Forecast Page) */}
+      <section
+        className="forecast-benchmark-section"
+        id="forecast-benchmark-section"
+        aria-label="Machine Learning Validation Benchmark and Multi-Model Comparison"
+      >
         <ModelComparisonPanel
           comparison={modelsComparison}
           selectedModel={selectedModel}
