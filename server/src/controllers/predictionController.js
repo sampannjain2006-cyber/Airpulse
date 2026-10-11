@@ -9,8 +9,9 @@ import {
 
 export async function getStationPrediction(req, res, next) {
   try {
-    const { model } = req.query;
-    const result = await getStationForecast(req.params.stationId, model || 'weighted_ensemble');
+    const { model, reference_date, referenceDate } = req.query;
+    const ref = reference_date || referenceDate;
+    const result = await getStationForecast(req.params.stationId, model || 'weighted_ensemble', ref);
     res.json(result);
   } catch (err) {
     next(err);
@@ -48,8 +49,9 @@ export async function getAllPredictions(req, res, next) {
 
 export async function getPredictionSnapshot(req, res, next) {
   try {
-    const { date, model } = req.query;
-    const result = await getPredictionsSnapshot(date, model || 'weighted_ensemble');
+    const { date, model, reference_date, referenceDate } = req.query;
+    const ref = reference_date || referenceDate;
+    const result = await getPredictionsSnapshot(date, model || 'weighted_ensemble', ref);
     res.json(result);
   } catch (err) {
     next(err);
@@ -58,7 +60,9 @@ export async function getPredictionSnapshot(req, res, next) {
 
 export async function getPredictionHorizon(req, res, next) {
   try {
-    const result = await getHorizon();
+    const { reference_date, referenceDate } = req.query;
+    const ref = reference_date || referenceDate;
+    const result = await getHorizon(ref);
     res.json(result);
   } catch (err) {
     next(err);

@@ -28,7 +28,14 @@ function loadSummaryJson() {
   return null;
 }
 
-export async function getStationForecast(stationIdParam, modelName = 'weighted_ensemble') {
+import {
+  getCurrentDateInTimezone,
+  validateReferenceDate,
+  getForecastTargetDates,
+  APP_TIMEZONE,
+} from '../utils/dateUtils.js';
+
+export async function getStationForecast(stationIdParam, modelName = 'weighted_ensemble', referenceDateParam = null) {
   const stationId = parseInt(stationIdParam, 10);
   if (isNaN(stationId)) {
     const err = new Error(`Invalid station_id: '${stationIdParam}'. Must be a numeric ID.`);
@@ -43,18 +50,38 @@ export async function getStationForecast(stationIdParam, modelName = 'weighted_e
     throw err;
   }
 
-  // Retrieve predictions for the selected model
-  const predictions = await findPredictionsByStationId(stationId, modelName);
+  // Get dynamic timezone-safe horizon for the reference date (validates future dates)
+  const horizon = await getForecastHorizon(referenceDateParam);
+  const refDate = horizon.reference_date;
+  const allowedDates = horizon.allowed_dates;
 
-  // Retrieve latest observed PM2.5 measurement for reference
+  // Retrieve predictions for the selected model strictly matching the 5 horizon target dates
+  const predictions = await findPredictionsByStationId(stationId, modelName, allowedDates);
+
+  // Retrieve observation records strictly up to reference date (prevent future data leakage)
   const pool = getPool();
+  const histCheckRes = await pool.query(
+    `SELECT
+       COUNT(DISTINCT DATE(recorded_at))::int AS hist_days,
+       MAX(recorded_at) AS last_obs_time
+     FROM environmental_observations
+     WHERE station_id = $1
+       AND pm25 IS NOT NULL
+       AND recorded_at <= ($2::date + interval '1 day' - interval '1 millisecond');`,
+    [stationId, refDate]
+  );
+  const histDays = histCheckRes.rows[0]?.hist_days || 0;
+
+  // Retrieve latest observed PM2.5 measurement up to reference date
   const lastObsRes = await pool.query(
     `SELECT TO_CHAR(recorded_at, 'YYYY-MM-DD') AS obs_date, pm25::float
      FROM environmental_observations
-     WHERE station_id = $1 AND pm25 IS NOT NULL
+     WHERE station_id = $1
+       AND pm25 IS NOT NULL
+       AND recorded_at <= ($2::date + interval '1 day' - interval '1 millisecond')
      ORDER BY recorded_at DESC
      LIMIT 1;`,
-    [stationId]
+    [stationId, refDate]
   );
   const lastObs = lastObsRes.rows[0] || null;
 
@@ -68,7 +95,8 @@ export async function getStationForecast(stationIdParam, modelName = 'weighted_e
     ? 'Random Forest'
     : 'XGBoost';
 
-  if (!predictions || predictions.length === 0) {
+  // If station has insufficient history (< 14 days) or no predictions available for horizon
+  if (histDays < 14 || !predictions || predictions.length === 0) {
     return {
       station_id: station.id,
       station_code: station.station_code,
@@ -81,15 +109,31 @@ export async function getStationForecast(stationIdParam, modelName = 'weighted_e
       model: modelName,
       model_display_name: modelDisplayName,
       model_version: '1.0.0',
+      reference_date: refDate,
+      forecast_horizon: horizon,
       last_observed: lastObs ? { date: lastObs.obs_date, value: lastObs.pm25 } : null,
       forecast: [],
-      message: 'Prediction unavailable — insufficient historical data for this station.',
+      message: histDays < 14
+        ? `Prediction unavailable — insufficient historical telemetry (${histDays} days < 14 days required) up to reference date ${refDate}.`
+        : `Prediction unavailable — no valid forecast generated for reference date ${refDate}.`,
       source: 'OpenAQ historical observations',
       prediction_type: 'ML forecast',
     };
   }
 
   const first = predictions[0];
+  // Ensure we only return up to 5 days, sorted chronologically
+  const sortedForecast = predictions
+    .filter((p) => allowedDates.includes(p.prediction_date))
+    .slice(0, 5)
+    .map((p, idx) => ({
+      day: idx + 1,
+      date: p.prediction_date,
+      predicted_value: p.predicted_value,
+      lower_bound: p.lower_bound,
+      upper_bound: p.upper_bound,
+    }));
+
   return {
     station_id: station.id,
     station_code: station.station_code,
@@ -104,14 +148,10 @@ export async function getStationForecast(stationIdParam, modelName = 'weighted_e
     model_version: first.model_version || '1.0.0',
     metrics: first.metrics || modelEval || null,
     generated_at: first.generated_at,
+    reference_date: refDate,
+    forecast_horizon: horizon,
     last_observed: lastObs ? { date: lastObs.obs_date, value: lastObs.pm25 } : null,
-    forecast: predictions.map((p, idx) => ({
-      day: idx + 1,
-      date: p.prediction_date,
-      predicted_value: p.predicted_value,
-      lower_bound: p.lower_bound,
-      upper_bound: p.upper_bound,
-    })),
+    forecast: sortedForecast,
     source: 'OpenAQ historical observations',
     prediction_type: 'ML forecast',
     explanation:
@@ -185,15 +225,16 @@ export async function listAllPredictions() {
 /**
  * Snapshot of predictions across all active stations for a future forecast date.
  * Strictly validates that the requested date is within the 5-day horizon [T+1, T+5].
+ * Rejects Day 6+ or dates outside the valid horizon.
  */
-export async function getPredictionsSnapshot(dateStr, modelName = 'weighted_ensemble') {
+export async function getPredictionsSnapshot(dateStr, modelName = 'weighted_ensemble', referenceDateParam = null) {
   if (!dateStr || !/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
     const err = new Error("Invalid or missing date parameter. Must be in 'YYYY-MM-DD' format.");
     err.statusCode = 400;
     throw err;
   }
 
-  const horizon = await getForecastHorizon();
+  const horizon = await getForecastHorizon(referenceDateParam);
   const allowed = horizon.allowed_dates;
 
   if (!allowed.includes(dateStr)) {
@@ -233,8 +274,8 @@ export async function getPredictionsSnapshot(dateStr, modelName = 'weighted_ense
   };
 }
 
-export async function getHorizon() {
-  return await getForecastHorizon();
+export async function getHorizon(referenceDateParam = null) {
+  return await getForecastHorizon(referenceDateParam);
 }
 
 

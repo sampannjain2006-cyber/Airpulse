@@ -41,5 +41,16 @@ export const observationsApi = {
     );
     return response.data;
   },
+
+  getCurrentCondition: async (
+    stationId: number,
+    params?: { disable_google?: boolean; freshness_hours?: number }
+  ): Promise<import('../types/observation').StationCurrentConditionResponse> => {
+    const response = await apiClient.get<import('../types/observation').StationCurrentConditionResponse>(
+      `/observations/stations/${stationId}/current`,
+      { params }
+    );
+    return response.data;
+  },
 };
 

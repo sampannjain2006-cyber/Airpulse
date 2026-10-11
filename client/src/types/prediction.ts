@@ -27,6 +27,8 @@ export interface StationForecastResponse {
   model: string;
   model_display_name?: string;
   model_version?: string;
+  reference_date?: string;
+  forecast_horizon?: PredictionHorizonResponse;
   metrics?: ModelMetrics;
   generated_at?: string;
   last_observed?: {
@@ -82,6 +84,8 @@ export interface PredictionHorizonResponse {
   min_date: string;
   max_date: string;
   allowed_dates: string[];
+  timezone?: string;
+  current_app_date?: string;
 }
 
 export interface PredictionSnapshotResponse {

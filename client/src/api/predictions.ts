@@ -7,11 +7,12 @@ import type {
 export const predictionsApi = {
   getStationForecast: async (
     stationId: number | string,
-    model?: string
+    model?: string,
+    referenceDate?: string
   ): Promise<StationForecastResponse> => {
     const response = await apiClient.get<StationForecastResponse>(
       `/predictions/stations/${stationId}`,
-      { params: { model } }
+      { params: { model, reference_date: referenceDate } }
     );
     return response.data;
   },
@@ -32,18 +33,22 @@ export const predictionsApi = {
 
   snapshot: async (
     date: string,
-    model?: string
+    model?: string,
+    referenceDate?: string
   ): Promise<import('../types/prediction').PredictionSnapshotResponse> => {
     const response = await apiClient.get<import('../types/prediction').PredictionSnapshotResponse>(
       '/predictions/snapshot',
-      { params: { date, model } }
+      { params: { date, model, reference_date: referenceDate } }
     );
     return response.data;
   },
 
-  getHorizon: async (): Promise<import('../types/prediction').PredictionHorizonResponse> => {
+  getHorizon: async (
+    referenceDate?: string
+  ): Promise<import('../types/prediction').PredictionHorizonResponse> => {
     const response = await apiClient.get<import('../types/prediction').PredictionHorizonResponse>(
-      '/predictions/horizon'
+      '/predictions/horizon',
+      { params: { reference_date: referenceDate } }
     );
     return response.data;
   },

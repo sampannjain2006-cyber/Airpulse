@@ -1,11 +1,13 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import type { Station } from '../types/station';
-import type { Observation } from '../types/observation';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import type { Station, StateHierarchyItem } from '../types/station';
+import type { Observation, StationCurrentConditionResponse } from '../types/observation';
 import type { Hotspot } from '../types/hotspot';
+import { stationsApi } from '../api/stations';
+import { observationsApi } from '../api/observations';
 import { MapView } from '../components/MapView';
 import { StationCard, StationCardSkeleton } from '../components/StationCard';
 import { AirQualityMeter } from '../components/AirQualityMeter';
-import { formatValue, formatRelativeTime } from '../utils/aqiUtils';
+import { formatValue } from '../utils/aqiUtils';
 import type { ContextualMeasurement } from '../types/pollutant';
 import type { AppView } from '../components/Navbar';
 import type { AnalyzedRoute } from '../types/route';
@@ -43,48 +45,6 @@ interface LiveMonitoringViewProps {
   }) => void;
 }
 
-// Complete list of all 28 Indian States and 8 Union Territories
-const ALL_INDIAN_STATES_AND_UTS = [
-  // 28 States
-  'Andhra Pradesh',
-  'Arunachal Pradesh',
-  'Assam',
-  'Bihar',
-  'Chhattisgarh',
-  'Goa',
-  'Gujarat',
-  'Haryana',
-  'Himachal Pradesh',
-  'Jharkhand',
-  'Karnataka',
-  'Kerala',
-  'Madhya Pradesh',
-  'Maharashtra',
-  'Manipur',
-  'Meghalaya',
-  'Mizoram',
-  'Nagaland',
-  'Odisha',
-  'Punjab',
-  'Rajasthan',
-  'Sikkim',
-  'Tamil Nadu',
-  'Telangana',
-  'Tripura',
-  'Uttar Pradesh',
-  'Uttarakhand',
-  'West Bengal',
-  // 8 Union Territories
-  'Andaman and Nicobar Islands',
-  'Chandigarh',
-  'Dadra and Nagar Haveli and Daman and Diu',
-  'Delhi',
-  'Jammu and Kashmir',
-  'Ladakh',
-  'Lakshadweep',
-  'Puducherry',
-].sort();
-
 export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
   stations,
   latestObs,
@@ -110,13 +70,132 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
   const [selectedCity, setSelectedCity] = useState<string>('all');
   const [filterActiveOnly, setFilterActiveOnly] = useState(false);
 
+  // Authoritative State & City Hierarchy (Task 1)
+  const [hierarchy, setHierarchy] = useState<StateHierarchyItem[]>([]);
+  const [hierarchyLoading, setHierarchyLoading] = useState(false);
+  const [hierarchyError, setHierarchyError] = useState<string | null>(null);
+
+  // Dynamic station list when filtering by State or City (Task 1)
+  const [dynamicStations, setDynamicStations] = useState<Station[] | null>(null);
+  const [stationsFetching, setStationsFetching] = useState(false);
+
+  // Current condition telemetry with Google Air Quality fallback (Task 3)
+  const [currentCondition, setCurrentCondition] = useState<StationCurrentConditionResponse | null>(null);
+  const [currentConditionLoading, setCurrentConditionLoading] = useState(false);
+  const [currentConditionError, setCurrentConditionError] = useState<string | null>(null);
+  const [lastTelemetryRefresh, setLastTelemetryRefresh] = useState<string | null>(null);
+
+  // 1. Fetch authoritative hierarchy on mount
+  useEffect(() => {
+    let isMounted = true;
+    setHierarchyLoading(true);
+    setHierarchyError(null);
+    stationsApi
+      .getHierarchy()
+      .then((res) => {
+        if (isMounted) {
+          setHierarchy(res.states || []);
+          setHierarchyLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          setHierarchyError(err instanceof Error ? err.message : 'Failed to load station hierarchy');
+          setHierarchyLoading(false);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 2. Fetch stations when state or city filter changes
+  useEffect(() => {
+    if (selectedState === 'all' && selectedCity === 'all') {
+      setDynamicStations(null);
+      return;
+    }
+
+    let isMounted = true;
+    setStationsFetching(true);
+
+    stationsApi
+      .list({
+        state: selectedState !== 'all' ? selectedState : undefined,
+        city: selectedCity !== 'all' ? selectedCity : undefined,
+      })
+      .then((res) => {
+        if (isMounted) {
+          const list = res.stations || [];
+          setDynamicStations(list);
+          setStationsFetching(false);
+
+          // If current selected station is no longer in filtered list, select first match
+          if (selectedStation && !list.some((s) => s.id === selectedStation.id)) {
+            onSelectStation(list[0] || null);
+          } else if (!selectedStation && list.length > 0) {
+            onSelectStation(list[0]);
+          }
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.warn('[LiveMonitoringView] Filtered stations fetch error:', err);
+          setStationsFetching(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedState, selectedCity]);
+
+  // 3. Fetch station current condition (OpenAQ with Google fallback) whenever station changes
+  const refreshStationCondition = useCallback(
+    async (stationId: number) => {
+      setCurrentConditionLoading(true);
+      setCurrentConditionError(null);
+      try {
+        const res = await observationsApi.getCurrentCondition(stationId);
+        setCurrentCondition(res);
+        setLastTelemetryRefresh(
+          new Date().toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          })
+        );
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Failed to retrieve current condition';
+        setCurrentConditionError(msg);
+      } finally {
+        setCurrentConditionLoading(false);
+      }
+    },
+    []
+  );
+
+  useEffect(() => {
+    if (selectedStation) {
+      refreshStationCondition(selectedStation.id);
+    } else {
+      setCurrentCondition(null);
+    }
+  }, [selectedStation, refreshStationCondition]);
+
+  // Active station list: uses dynamic filtered stations when state/city active, otherwise dashboard 40
+  const activeStations = dynamicStations !== null ? dynamicStations : stations;
+
   // Map latest observations by station_id
   const obsMap = useMemo(() => {
     return new Map(latestObs.map((o) => [o.station_id, o]));
   }, [latestObs]);
 
-  // Count active stations per state in current dataset
-  const stationsCountByState = useMemo(() => {
+  // Available states from authoritative hierarchy (with station count)
+  const availableStates = useMemo(() => {
+    if (hierarchy.length > 0) {
+      return hierarchy.map((h) => ({ state: h.state, count: h.station_count }));
+    }
     const map = new Map<string, number>();
     stations.forEach((s) => {
       if (s.state) {
@@ -124,32 +203,67 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
         map.set(normalized, (map.get(normalized) || 0) + 1);
       }
     });
-    return map;
-  }, [stations]);
+    return Array.from(map.entries())
+      .map(([state, count]) => ({ state, count }))
+      .sort((a, b) => a.state.localeCompare(b.state));
+  }, [hierarchy, stations]);
 
-  // Compute dependent cities for selected state from real station data
+  // Available cities dependent strictly on selectedState (TASK 1 FIX)
   const availableCities = useMemo(() => {
-    const cityMap = new Map<string, number>();
-    stations.forEach((s) => {
-      if (s.city) {
-        const matchesState =
-          selectedState === 'all' ||
-          s.state?.toLowerCase() === selectedState.toLowerCase();
-        if (matchesState) {
+    if (selectedState === 'all') {
+      // If all states allowed, gather all distinct cities across all states
+      if (hierarchy.length > 0) {
+        const cityMap = new Map<string, number>();
+        hierarchy.forEach((st) => {
+          st.cities.forEach((c) => {
+            cityMap.set(c.city, (cityMap.get(c.city) || 0) + c.station_count);
+          });
+        });
+        return Array.from(cityMap.entries())
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => a.name.localeCompare(b.name));
+      }
+      const cityMap = new Map<string, number>();
+      stations.forEach((s) => {
+        if (s.city) {
           const c = s.city.trim();
           cityMap.set(c, (cityMap.get(c) || 0) + 1);
         }
+      });
+      return Array.from(cityMap.entries())
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    // Specific state selected: restrict cities ONLY to cities belonging to that state
+    if (hierarchy.length > 0) {
+      const stateItem = hierarchy.find(
+        (h) => h.state.toLowerCase() === selectedState.toLowerCase()
+      );
+      if (stateItem) {
+        return stateItem.cities.map((c) => ({ name: c.city, count: c.station_count }));
+      }
+    }
+
+    // Fallback using active station list
+    const cityMap = new Map<string, number>();
+    stations.forEach((s) => {
+      if (s.city && s.state?.toLowerCase() === selectedState.toLowerCase()) {
+        const c = s.city.trim();
+        cityMap.set(c, (cityMap.get(c) || 0) + 1);
       }
     });
     return Array.from(cityMap.entries())
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [stations, selectedState]);
+  }, [hierarchy, stations, selectedState]);
 
-  // Reset selectedCity when state changes if current city is no longer valid
+  // Reset selectedCity when state changes if current city is no longer valid for new state (TASK 1)
   useEffect(() => {
     if (selectedCity !== 'all') {
-      const cityStillAvailable = availableCities.some((c) => c.name === selectedCity);
+      const cityStillAvailable = availableCities.some(
+        (c) => c.name.toLowerCase() === selectedCity.toLowerCase()
+      );
       if (!cityStillAvailable) {
         setSelectedCity('all');
       }
@@ -158,7 +272,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
 
   // Filtered stations based on search, state, dependent city, and active-only
   const filteredStations = useMemo(() => {
-    return stations.filter((s) => {
+    return activeStations.filter((s) => {
       const q = searchQuery.toLowerCase().trim();
       const matchesSearch =
         !q ||
@@ -185,10 +299,51 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
 
       return true;
     });
-  }, [stations, searchQuery, selectedState, selectedCity, filterActiveOnly, obsMap]);
+  }, [activeStations, searchQuery, selectedState, selectedCity, filterActiveOnly, obsMap]);
 
-  const selectedObservation = selectedStation ? obsMap.get(selectedStation.id) : null;
-  const hasSelectedReadings = selectedObservation && (selectedObservation.pm25 !== null || selectedObservation.aqi !== null);
+  // Selected station observation (uses current condition from Google fallback if present, else latestObs)
+  const selectedObservation = useMemo(() => {
+    if (!selectedStation) return null;
+    const fallbackObs = obsMap.get(selectedStation.id) || null;
+
+    if (currentCondition && currentCondition.status === 'success') {
+      return {
+        id: selectedStation.id,
+        station_id: selectedStation.id,
+        station_code: selectedStation.station_code,
+        station_name: selectedStation.name,
+        city: selectedStation.city,
+        state: selectedStation.state,
+        latitude: selectedStation.latitude,
+        longitude: selectedStation.longitude,
+        recorded_at: currentCondition.recorded_at || fallbackObs?.recorded_at || '',
+        aqi: currentCondition.aqi !== undefined ? currentCondition.aqi : fallbackObs?.aqi ?? null,
+        aqi_category: currentCondition.aqi_category || fallbackObs?.aqi_category || null,
+        pm25: currentCondition.pm25 !== undefined ? currentCondition.pm25 : fallbackObs?.pm25 ?? null,
+        pm10: currentCondition.pm10 !== undefined ? currentCondition.pm10 : fallbackObs?.pm10 ?? null,
+        no2: currentCondition.no2 !== undefined ? currentCondition.no2 : fallbackObs?.no2 ?? null,
+        so2: currentCondition.so2 !== undefined ? currentCondition.so2 : fallbackObs?.so2 ?? null,
+        co: currentCondition.co !== undefined ? currentCondition.co : fallbackObs?.co ?? null,
+        o3: currentCondition.o3 !== undefined ? currentCondition.o3 : fallbackObs?.o3 ?? null,
+        temperature: currentCondition.temperature !== undefined ? currentCondition.temperature : fallbackObs?.temperature ?? null,
+        humidity: currentCondition.humidity !== undefined ? currentCondition.humidity : fallbackObs?.humidity ?? null,
+        pressure: currentCondition.pressure !== undefined ? currentCondition.pressure : fallbackObs?.pressure ?? null,
+        source: currentCondition.source || fallbackObs?.source || 'OpenAQ',
+        ingested_at: currentCondition.recorded_at || fallbackObs?.ingested_at || '',
+      };
+    }
+    return fallbackObs;
+  }, [selectedStation, obsMap, currentCondition]);
+
+  const hasSelectedReadings =
+    selectedObservation && (selectedObservation.pm25 !== null || selectedObservation.aqi !== null);
+
+  // Provenance flags (Task 3)
+  const isModelledFallback = currentCondition?.data_type === 'modelled';
+  const isObservedLive = currentCondition?.data_type === 'observed' && currentCondition.is_fresh;
+  const isTelemetryStale =
+    currentCondition?.status === 'stale' ||
+    (!currentCondition && selectedObservation?.recorded_at && (Date.now() - new Date(selectedObservation.recorded_at).getTime()) > 24 * 3600 * 1000);
 
   // Active Pollutants: only render cards for pollutants with valid measurements
   const activePollutants = useMemo(() => {
@@ -214,15 +369,6 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
     return list.filter((w) => w.val !== null && !isNaN(Number(w.val)));
   }, [selectedObservation]);
 
-  // Determine if telemetry timestamp is older than 24 hours
-  const isDataStale = useMemo(() => {
-    if (!selectedObservation?.recorded_at) return false;
-    const recordedTime = new Date(selectedObservation.recorded_at).getTime();
-    if (isNaN(recordedTime)) return false;
-    const ageHours = (Date.now() - recordedTime) / (1000 * 60 * 60);
-    return ageHours > 24;
-  }, [selectedObservation]);
-
   const isFiltersActive =
     searchQuery.trim() !== '' ||
     selectedState !== 'all' ||
@@ -234,6 +380,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
     setSelectedState('all');
     setSelectedCity('all');
     setFilterActiveOnly(false);
+    setDynamicStations(null);
   };
 
   return (
@@ -283,7 +430,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
             )}
           </div>
 
-          {/* State Selector covering all 28 States and 8 UTs */}
+          {/* State Selector covering all states in authoritative hierarchy */}
           <div className="filter-select-group">
             <label htmlFor="state-filter-select" className="filter-field-label">State / UT:</label>
             <select
@@ -295,20 +442,18 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                 setSelectedCity('all'); // Reset dependent city on state change
               }}
               aria-label="Filter by state or union territory"
+              disabled={hierarchyLoading}
             >
-              <option value="all">All States &amp; UTs (36)</option>
-              {ALL_INDIAN_STATES_AND_UTS.map((st) => {
-                const count = stationsCountByState.get(st) || 0;
-                return (
-                  <option key={st} value={st}>
-                    {st} {count > 0 ? `(${count} stn)` : '(0 stn)'}
-                  </option>
-                );
-              })}
+              <option value="all">All States &amp; UTs ({availableStates.length})</option>
+              {availableStates.map(({ state: st, count }) => (
+                <option key={st} value={st}>
+                  {st} {count > 0 ? `(${count} stn)` : '(0 stn)'}
+                </option>
+              ))}
             </select>
           </div>
 
-          {/* Dependent City Selector */}
+          {/* Dependent City Selector (Strictly filtered by selected state) */}
           <div className="filter-select-group">
             <label htmlFor="city-filter-select" className="filter-field-label">Monitoring City:</label>
             <select
@@ -317,7 +462,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
               aria-label="Filter by city"
-              disabled={availableCities.length === 0}
+              disabled={availableCities.length === 0 || hierarchyLoading}
             >
               <option value="all">
                 {selectedState === 'all'
@@ -350,6 +495,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
             {selectedState !== 'all' && ` in ${selectedState}`}
             {selectedCity !== 'all' && ` (${selectedCity})`}
             {searchQuery && ` matching "${searchQuery}"`}
+            {stationsFetching && <span className="stations-loading-pill"> ⏳ Updating stations...</span>}
           </div>
 
           {isFiltersActive && (
@@ -359,6 +505,13 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
           )}
         </div>
       </div>
+
+      {hierarchyError && (
+        <div className="nature-alert warning" role="alert" style={{ marginBottom: '1rem' }}>
+          <span className="alert-icon">⚠️</span>
+          <span>Station hierarchy notice: {hierarchyError}</span>
+        </div>
+      )}
 
       {error && (
         <div className="nature-alert error" role="alert">
@@ -413,13 +566,30 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                 <div className="inspector-identity">
                   <div className="inspector-chips-row">
                     <span className="station-code-chip">{selectedStation.station_code}</span>
-                    <span className="station-source-chip">{selectedStation.source_type.toUpperCase()}</span>
-                    {hasSelectedReadings ? (
-                      <span className={`live-telemetry-badge ${isDataStale ? 'stale' : 'live'}`}>
-                        {isDataStale ? '⚠️ Historical Telemetry' : '● Live Ingestion'}
+                    <span className="station-source-chip">
+                      {isModelledFallback ? 'GOOGLE AIR QUALITY' : selectedStation.source_type.toUpperCase()}
+                    </span>
+                    {isModelledFallback ? (
+                      <span className="live-telemetry-badge modelled">
+                        ◆ Modelled Air Quality (Google Fallback)
+                      </span>
+                    ) : isObservedLive ? (
+                      <span className="live-telemetry-badge live">
+                        ● Live Ground Ingestion (OpenAQ)
+                      </span>
+                    ) : (isTelemetryStale || hasSelectedReadings) ? (
+                      <span className="live-telemetry-badge stale">
+                        ⚠️ Stale Telemetry (&gt;24h)
                       </span>
                     ) : (
-                      <span className="live-telemetry-badge offline">○ Offline</span>
+                      <span className="live-telemetry-badge offline">
+                        ○ Telemetry Unavailable
+                      </span>
+                    )}
+                    {lastTelemetryRefresh && (
+                      <span className="last-refresh-chip">
+                        Updated: {lastTelemetryRefresh}
+                      </span>
                     )}
                   </div>
                   <h3 className="inspector-station-name">{selectedStation.name}</h3>
@@ -432,6 +602,14 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                 </div>
 
                 <div className="inspector-actions">
+                  <button
+                    className="nature-btn nature-btn-sm nature-btn-secondary btn-refresh-telemetry"
+                    onClick={() => refreshStationCondition(selectedStation.id)}
+                    disabled={currentConditionLoading}
+                    title="Refresh telemetry condition (OpenAQ with Google Air Quality fallback)"
+                  >
+                    {currentConditionLoading ? 'Refreshing...' : '🔄 Refresh Telemetry'}
+                  </button>
                   {onOpenRecommendations && (
                     <button
                       className="nature-btn nature-btn-sm nature-btn-secondary btn-station-rec-action"
@@ -440,7 +618,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                           station: selectedStation,
                           pollutant: 'pm25',
                           value: selectedObservation?.pm25,
-                          dataType: 'observed',
+                          dataType: isModelledFallback ? 'modelled' : 'observed',
                         })
                       }
                       title="View verified precaution recommendations based on this station's telemetry"
@@ -456,7 +634,7 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                           station: selectedStation,
                           pollutant: 'pm25',
                           value: selectedObservation?.pm25,
-                          dataType: 'observed',
+                          dataType: isModelledFallback ? 'modelled' : 'observed',
                         })
                       }
                       title="Open destination-aware accessories store for this station"
@@ -488,6 +666,34 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Telemetry Warning / Current Condition Error Notice */}
+              {currentConditionError && (
+                <div className="nature-alert warning" role="alert" style={{ margin: '0.75rem 0' }}>
+                  <span className="alert-icon">⚠️</span>
+                  <span>Telemetry status: {currentConditionError}</span>
+                </div>
+              )}
+
+              {/* Google Modelled Fallback Notice (Task 3) */}
+              {isModelledFallback && (
+                <div className="google-modelled-alert-banner">
+                  <div className="alert-banner-header">
+                    <span className="nature-tag cyan">GOOGLE AIR QUALITY API FALLBACK</span>
+                    <span className="modelled-timestamp">
+                      Timestamp: {currentCondition?.recorded_at ? new Date(currentCondition.recorded_at).toLocaleString('en-IN') : 'Current Hour'}
+                    </span>
+                  </div>
+                  <p className="alert-banner-text">
+                    <strong>Modelled Environmental Estimate:</strong> {currentCondition?.fallback_reason || 'OpenAQ ground observation missing or stale (>24h). Displaying Google spatial modelled surface estimate.'}
+                  </p>
+                  <div className="alert-provenance-tags">
+                    <span className="prov-tag">Data Type: Modelled Spatial Surface</span>
+                    <span className="prov-tag">NAQI Category: {currentCondition?.aqi_category || 'CPCB Standard'}</span>
+                    <span className="prov-tag">Cost Safeguard: Cached (15-min TTL)</span>
+                  </div>
+                </div>
+              )}
 
               {/* Air Quality Meter Component (Horizontal Segmented CPCB Gauge) */}
               <div className="inspector-meter-section">
@@ -575,8 +781,12 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                   {/* Compact Footer with Recorded Timestamp & Ingestion Freshness */}
                   <div className="inspector-footer-meta">
                     <div className="meta-item">
-                      <span className="meta-label">Source Provider:</span>
-                      <strong className="meta-value">{selectedObservation?.source || selectedStation.source_type || 'OpenAQ'}</strong>
+                      <span className="meta-label">Data Provenance:</span>
+                      <strong className="meta-value">
+                        {isModelledFallback
+                          ? 'Modelled Air Quality (Google API fallback)'
+                          : selectedObservation?.source || selectedStation.source_type || 'OpenAQ ground observation'}
+                      </strong>
                     </div>
                     <span className="meta-sep">·</span>
                     <div className="meta-item">
@@ -592,14 +802,21 @@ export const LiveMonitoringView: React.FC<LiveMonitoringViewProps> = ({
                     </div>
                     <span className="meta-sep">·</span>
                     <div className="meta-item">
-                      <span className="meta-label">Pipeline Ingestion:</span>
-                      <strong className="meta-value">{formatRelativeTime(selectedObservation?.ingested_at)}</strong>
+                      <span className="meta-label">Data Freshness:</span>
+                      <strong className="meta-value">
+                        {isModelledFallback
+                          ? 'Current Modelled Estimate'
+                          : isObservedLive
+                          ? 'Fresh Ground Ingestion'
+                          : 'Stale (>24h ago)'}
+                      </strong>
                     </div>
-                    {isDataStale && (
+                    {lastTelemetryRefresh && (
                       <>
                         <span className="meta-sep">·</span>
-                        <div className="meta-item stale-warning-pill">
-                          <span>⚠️ Stale Telemetry (&gt;24h ago)</span>
+                        <div className="meta-item">
+                          <span className="meta-label">Last Refresh:</span>
+                          <strong className="meta-value">{lastTelemetryRefresh}</strong>
                         </div>
                       </>
                     )}

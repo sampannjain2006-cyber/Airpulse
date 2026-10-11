@@ -17,3 +17,20 @@ export interface StationsResponse {
   count: number;
   stations: Station[];
 }
+
+export interface CityHierarchyItem {
+  city: string;
+  station_count: number;
+  has_dashboard_station?: boolean;
+}
+
+export interface StateHierarchyItem {
+  state: string;
+  station_count: number;
+  cities: CityHierarchyItem[];
+}
+
+export interface StationHierarchyResponse {
+  states: StateHierarchyItem[];
+}
+

@@ -1,7 +1,22 @@
 import { getPool } from '../config/db.js';
 
-export async function findPredictionsByStationId(stationId, modelName = 'weighted_ensemble') {
+import {
+  getCurrentDateInTimezone,
+  getForecastTargetDates,
+  validateReferenceDate,
+  APP_TIMEZONE,
+} from '../utils/dateUtils.js';
+
+export async function findPredictionsByStationId(stationId, modelName = 'weighted_ensemble', allowedDates = null) {
   const pool = getPool();
+  const params = [stationId, modelName];
+  let dateFilter = '';
+
+  if (Array.isArray(allowedDates) && allowedDates.length > 0) {
+    params.push(allowedDates);
+    dateFilter = `AND TO_CHAR(p.prediction_date, 'YYYY-MM-DD') = ANY($${params.length})`;
+  }
+
   const sql = `
     SELECT
       p.id,
@@ -19,9 +34,10 @@ export async function findPredictionsByStationId(stationId, modelName = 'weighte
     FROM predictions p
     WHERE p.station_id = $1
       AND p.model_name = $2
+      ${dateFilter}
     ORDER BY p.prediction_date ASC;
   `;
-  const { rows } = await pool.query(sql, [stationId, modelName]);
+  const { rows } = await pool.query(sql, params);
   return rows;
 }
 
@@ -97,9 +113,9 @@ export async function findPredictionsByDate(dateStr, modelName = 'weighted_ensem
     FROM monitoring_stations s
     LEFT JOIN predictions p
       ON p.station_id = s.id
-     AND p.prediction_date = $1
-     AND p.target = 'pm25'
-     AND p.model_name = $2
+      AND p.prediction_date = $1
+      AND p.target = 'pm25'
+      AND p.model_name = $2
     WHERE s.is_active = TRUE
     ORDER BY s.state, s.city, s.name;
   `;
@@ -107,24 +123,36 @@ export async function findPredictionsByDate(dateStr, modelName = 'weighted_ensem
   return rows;
 }
 
-export async function getForecastHorizon() {
-  const pool = getPool();
-  const sql = `
-    SELECT
-      TO_CHAR(MIN(prediction_date), 'YYYY-MM-DD') AS min_date,
-      TO_CHAR(MAX(prediction_date), 'YYYY-MM-DD') AS max_date,
-      ARRAY_AGG(DISTINCT TO_CHAR(prediction_date, 'YYYY-MM-DD') ORDER BY TO_CHAR(prediction_date, 'YYYY-MM-DD')) AS available_dates
-    FROM predictions
-    WHERE prediction_date >= '2026-10-03';
-  `;
-  const { rows } = await pool.query(sql);
-  const row = rows[0] || {};
+/**
+ * Calculates a dynamic, timezone-safe 5-day forecasting horizon.
+ * Capped so future reference dates are strictly rejected.
+ * Target dates are strictly T+1 through T+5. Day 6+ is never returned.
+ *
+ * @param {string} [referenceDateParam] - 'YYYY-MM-DD'
+ * @returns {Promise<object>} Horizon descriptor
+ */
+export async function getForecastHorizon(referenceDateParam) {
+  const todayInKolkata = getCurrentDateInTimezone();
+  let refDate;
+
+  if (referenceDateParam) {
+    refDate = validateReferenceDate(referenceDateParam);
+  } else {
+    // If not specified, default to today in Kolkata, or the latest available historical baseline
+    refDate = todayInKolkata;
+  }
+
+  const allowedDates = getForecastTargetDates(refDate, 5);
+
   return {
-    reference_date: '2026-10-02',
+    reference_date: refDate,
     horizon_days: 5,
-    min_date: row.min_date || '2026-10-03',
-    max_date: row.max_date || '2026-10-07',
-    allowed_dates: row.available_dates || ['2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07'],
+    min_date: allowedDates[0],
+    max_date: allowedDates[4],
+    allowed_dates: allowedDates,
+    forecast_dates: allowedDates,
+    timezone: APP_TIMEZONE,
+    current_app_date: todayInKolkata,
   };
 }
 

@@ -4,6 +4,7 @@ import {
   getObservationHistory,
   getObservationsSnapshot,
   getDateRange,
+  getStationCurrentCondition,
 } from '../services/observationService.js';
 
 export async function listLatestObservations(req, res, next) {
@@ -49,6 +50,20 @@ export async function getObservationSnapshot(req, res, next) {
 export async function getObservationDateRange(req, res, next) {
   try {
     const result = await getDateRange();
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getStationCurrentConditionsHandler(req, res, next) {
+  try {
+    const { stationId } = req.params;
+    const { disable_google, disableGoogle, freshness_hours, freshnessHours } = req.query;
+    const result = await getStationCurrentCondition(stationId, {
+      disableGoogle: disable_google === 'true' || disableGoogle === 'true',
+      freshnessHours: freshness_hours || freshnessHours || 24,
+    });
     res.json(result);
   } catch (err) {
     next(err);
