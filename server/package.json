@@ -10,7 +10,8 @@
     "migrate": "node src/scripts/migrate.js",
     "sync": "node src/jobs/syncJob.js",
     "sync:history": "node src/jobs/syncHistoryJob.js",
-    "ml:forecast": "../ml/venv/bin/python ../ml/app/training/train_forecast.py"
+    "ml:forecast": "../ml/venv/bin/python ../ml/app/training/train_forecast.py",
+    "test": "node --env-file=.env ../scratch/test_tasks_1_2_3.mjs"
   },
   "keywords": [
     "airpulse",

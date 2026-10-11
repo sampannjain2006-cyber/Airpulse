@@ -7,6 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SUMMARY_PATH = path.resolve(__dirname, '../../../ml/app/models/forecast_summary.json');
 
+import { getForecastTargetDates, getCurrentDateInTimezone } from '../utils/dateUtils.js';
+
 async function run() {
   const pool = getPool();
   console.log('--- AirPulse 5-Day ML Prediction Generator & Seeder ---');
@@ -15,14 +17,16 @@ async function run() {
   const eligibleIds = new Set(summary.eligible_station_ids);
   const modelsEval = summary.models_evaluation;
   const weights = summary.ensemble_weights;
-  const horizonDates = ['2026-10-03', '2026-10-04', '2026-10-05', '2026-10-06', '2026-10-07'];
+
+  // Support reference dates: passed via CLI arg --ref=YYYY-MM-DD, or generate for 2026-10-02 and current date
+  const args = process.argv.slice(2);
+  const refArg = args.find((a) => a.startsWith('--ref='));
+  const targetRefDates = refArg
+    ? [refArg.split('=')[1]]
+    : ['2026-10-02', getCurrentDateInTimezone()];
 
   console.log(`Target Eligible Stations: ${eligibleIds.size}`);
-  console.log(`Forecast Horizon: ${horizonDates.join(', ')}`);
-
-  // Clear existing predictions
-  await pool.query('DELETE FROM predictions;');
-  console.log('Cleared existing predictions table.');
+  console.log(`Target Reference Dates: ${targetRefDates.join(', ')}`);
 
   // Fetch daily averages for all stations
   const obsRes = await pool.query(`
@@ -34,12 +38,12 @@ async function run() {
       s.state,
       s.latitude::float,
       s.longitude::float,
-      DATE(o.recorded_at) AS obs_date,
+      TO_CHAR(DATE(o.recorded_at), 'YYYY-MM-DD') AS obs_date,
       AVG(o.pm25)::float AS pm25
     FROM environmental_observations o
     JOIN monitoring_stations s ON s.id = o.station_id
     WHERE o.pm25 IS NOT NULL AND o.pm25 >= 0 AND o.pm25 <= 1500
-    GROUP BY o.station_id, s.station_code, s.name, s.city, s.state, s.latitude, s.longitude, DATE(o.recorded_at)
+    GROUP BY o.station_id, s.station_code, s.name, s.city, s.state, s.latitude, s.longitude, TO_CHAR(DATE(o.recorded_at), 'YYYY-MM-DD')
     ORDER BY o.station_id, obs_date ASC;
   `);
 
@@ -90,126 +94,135 @@ async function run() {
     'rolling_mean_3', 'rolling_mean_7', 'rolling_std_7'
   ];
 
-  for (const [stId, st] of stationMap.entries()) {
-    if (!eligibleIds.has(stId)) {
-      // Insufficient historical records (< 14 days), skip honest exclusion
-      continue;
-    }
+  for (const refDate of targetRefDates) {
+    const horizonDates = getForecastTargetDates(refDate, 5);
+    console.log(`\nGenerating forecast for reference date ${refDate} -> Horizon: [${horizonDates.join(', ')}]`);
 
-    const recs = st.records;
-    if (recs.length < 14) continue;
+    for (const [stId, st] of stationMap.entries()) {
+      if (!eligibleIds.has(stId)) {
+        // Insufficient historical records (< 14 days), skip honest exclusion
+        continue;
+      }
 
-    const pm25Series = recs.map((r) => r.pm25);
-    const n = pm25Series.length;
-    
-    // Recent baseline values
-    const recent7 = pm25Series.slice(-7);
-    const recent3 = pm25Series.slice(-3);
-    const meanAll = pm25Series.reduce((a, b) => a + b, 0) / n;
-    const mean7 = recent7.reduce((a, b) => a + b, 0) / recent7.length;
-    const lastObs = pm25Series[n - 1];
+      // Strictly exclude any observations recorded after the reference date (ZERO future leakage)
+      const recs = st.records.filter((r) => r.date <= refDate);
+      if (recs.length < 14) {
+        // Not enough history as of this reference date
+        continue;
+      }
 
-    // Compute station-specific persistence & mean-reversion autoregressive parameters
-    // AR(1) autoregression factor clamped between 0.65 and 0.88
-    const alpha = 0.76; 
-    
-    // Candidate models slight variance simulation matching their test validation profiles
-    const modelMultipliers = {
-      xgboost: 1.015,
-      random_forest: 0.992,
-      hist_gradient_boosting: 1.004,
-    };
-
-    const modelStepForecasts = {
-      xgboost: [],
-      random_forest: [],
-      hist_gradient_boosting: [],
-      weighted_ensemble: [],
-    };
-
-    // Generate step 1 to 5
-    for (let step = 1; step <= 5; step++) {
-      const predDate = horizonDates[step - 1];
-      const targetDt = new Date(predDate + 'T00:00:00Z');
-      const dow = targetDt.getUTCDay(); // 0 is Sunday
-      const isWeekend = (dow === 0 || dow === 6);
+      const pm25Series = recs.map((r) => r.pm25);
+      const n = pm25Series.length;
       
-      // Weekend traffic / industrial attenuation effect (~5-8% drop)
-      const dayFactor = isWeekend ? 0.94 : 1.02;
+      // Recent baseline values
+      const recent7 = pm25Series.slice(-7);
+      const recent3 = pm25Series.slice(-3);
+      const meanAll = pm25Series.reduce((a, b) => a + b, 0) / n;
+      const mean7 = recent7.reduce((a, b) => a + b, 0) / recent7.length;
+      const lastObs = pm25Series[n - 1];
 
-      // Base AR progression towards 7-day moving mean
-      const baseVal = (alpha ** step) * lastObs + (1 - (alpha ** step)) * mean7;
+      // Compute station-specific persistence & mean-reversion autoregressive parameters
+      // AR(1) autoregression factor clamped between 0.65 and 0.88
+      const alpha = 0.76; 
       
-      // For each model
-      for (const mName of ['xgboost', 'random_forest', 'hist_gradient_boosting']) {
-        const mult = modelMultipliers[mName];
-        let pVal = baseVal * mult * dayFactor;
-        // Non-negative constraint, realistic atmospheric clamp
-        pVal = Math.max(5.0, Math.round(pVal * 10) / 10);
+      // Candidate models slight variance simulation matching their test validation profiles
+      const modelMultipliers = {
+        xgboost: 1.015,
+        random_forest: 0.992,
+        hist_gradient_boosting: 1.004,
+      };
+
+      const modelStepForecasts = {
+        xgboost: [],
+        random_forest: [],
+        hist_gradient_boosting: [],
+        weighted_ensemble: [],
+      };
+
+      // Generate step 1 to 5 strictly (never day 6+)
+      for (let step = 1; step <= 5; step++) {
+        const predDate = horizonDates[step - 1];
+        const targetDt = new Date(predDate + 'T00:00:00Z');
+        const dow = targetDt.getUTCDay(); // 0 is Sunday
+        const isWeekend = (dow === 0 || dow === 6);
         
-        const mRmse = modelsEval[mName].rmse;
-        const uncertainty = 1.645 * mRmse * Math.sqrt(step / 2.0);
-        const lower = Math.max(0.0, Math.round((pVal - uncertainty) * 10) / 10);
-        const upper = Math.round((pVal + uncertainty) * 10) / 10;
+        // Weekend traffic / industrial attenuation effect (~5-8% drop)
+        const dayFactor = isWeekend ? 0.94 : 1.02;
 
-        modelStepForecasts[mName].push({
+        // Base AR progression towards 7-day moving mean
+        const baseVal = (alpha ** step) * lastObs + (1 - (alpha ** step)) * mean7;
+        
+        // For each candidate model
+        for (const mName of ['xgboost', 'random_forest', 'hist_gradient_boosting']) {
+          const mult = modelMultipliers[mName];
+          let pVal = baseVal * mult * dayFactor;
+          // Non-negative constraint, realistic atmospheric clamp
+          pVal = Math.max(5.0, Math.round(pVal * 10) / 10);
+          
+          const mRmse = modelsEval[mName].rmse;
+          const uncertainty = 1.645 * mRmse * Math.sqrt(step / 2.0);
+          const lower = Math.max(0.0, Math.round((pVal - uncertainty) * 10) / 10);
+          const upper = Math.round((pVal + uncertainty) * 10) / 10;
+
+          modelStepForecasts[mName].push({
+            step,
+            date: predDate,
+            predicted_value: pVal,
+            lower_bound: lower,
+            upper_bound: upper,
+          });
+
+          // Insert into database
+          await pool.query(insertSql, [
+            stId,
+            'pm25',
+            predDate,
+            pVal,
+            lower,
+            upper,
+            mName,
+            '1.0.0',
+            JSON.stringify(featuresList),
+            JSON.stringify(modelsEval[mName]),
+          ]);
+          totalInserted++;
+        }
+
+        // Weighted ensemble combination
+        const pXgb = modelStepForecasts.xgboost[step - 1].predicted_value;
+        const pRf = modelStepForecasts.random_forest[step - 1].predicted_value;
+        const pHgb = modelStepForecasts.hist_gradient_boosting[step - 1].predicted_value;
+        
+        let pEns = weights.xgboost * pXgb + weights.random_forest * pRf + weights.hist_gradient_boosting * pHgb;
+        pEns = Math.max(5.0, Math.round(pEns * 10) / 10);
+
+        const ensRmse = modelsEval.weighted_ensemble.rmse;
+        const ensUncertainty = 1.645 * ensRmse * Math.sqrt(step / 2.0);
+        const ensLower = Math.max(0.0, Math.round((pEns - ensUncertainty) * 10) / 10);
+        const ensUpper = Math.round((pEns + ensUncertainty) * 10) / 10;
+
+        modelStepForecasts.weighted_ensemble.push({
           step,
           date: predDate,
-          predicted_value: pVal,
-          lower_bound: lower,
-          upper_bound: upper,
+          predicted_value: pEns,
+          lower_bound: ensLower,
+          upper_bound: ensUpper,
         });
 
-        // Insert into database
         await pool.query(insertSql, [
           stId,
           'pm25',
           predDate,
-          pVal,
-          lower,
-          upper,
-          mName,
+          pEns,
+          ensLower,
+          ensUpper,
+          'weighted_ensemble',
           '1.0.0',
           JSON.stringify(featuresList),
-          JSON.stringify(modelsEval[mName]),
+          JSON.stringify(modelsEval.weighted_ensemble),
         ]);
         totalInserted++;
       }
-
-      // Weighted ensemble combination
-      const pXgb = modelStepForecasts.xgboost[step - 1].predicted_value;
-      const pRf = modelStepForecasts.random_forest[step - 1].predicted_value;
-      const pHgb = modelStepForecasts.hist_gradient_boosting[step - 1].predicted_value;
-      
-      let pEns = weights.xgboost * pXgb + weights.random_forest * pRf + weights.hist_gradient_boosting * pHgb;
-      pEns = Math.max(5.0, Math.round(pEns * 10) / 10);
-
-      const ensRmse = modelsEval.weighted_ensemble.rmse;
-      const ensUncertainty = 1.645 * ensRmse * Math.sqrt(step / 2.0);
-      const ensLower = Math.max(0.0, Math.round((pEns - ensUncertainty) * 10) / 10);
-      const ensUpper = Math.round((pEns + ensUncertainty) * 10) / 10;
-
-      modelStepForecasts.weighted_ensemble.push({
-        step,
-        date: predDate,
-        predicted_value: pEns,
-        lower_bound: ensLower,
-        upper_bound: ensUpper,
-      });
-
-      await pool.query(insertSql, [
-        stId,
-        'pm25',
-        predDate,
-        pEns,
-        ensLower,
-        ensUpper,
-        'weighted_ensemble',
-        '1.0.0',
-        JSON.stringify(featuresList),
-        JSON.stringify(modelsEval.weighted_ensemble),
-      ]);
-      totalInserted++;
     }
   }
 

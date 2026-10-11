@@ -92,6 +92,116 @@ const KNOWN_INDIAN_CITIES = [
   'Kochi', 'Visakhapatnam', 'Surat', 'Dehradun', 'Shimla', 'Udaipur', 'Jammu'
 ];
 
+const PCB_TO_STATE = [
+  ['HSPCB', 'Haryana'],
+  ['PPCB', 'Punjab'],
+  ['UPPCB', 'Uttar Pradesh'],
+  ['MPCB', 'Maharashtra'],
+  ['DPCC', 'Delhi'],
+  ['RSPCB', 'Rajasthan'],
+  ['KSPCB', 'Karnataka'],
+  ['BSPCB', 'Bihar'],
+  ['TNPCB', 'Tamil Nadu'],
+  ['WBPCB', 'West Bengal'],
+  ['WBSPCB', 'West Bengal'],
+  ['MPPCB', 'Madhya Pradesh'],
+  ['APPCB', 'Andhra Pradesh'],
+  ['APSPCB', 'Arunachal Pradesh'],
+  ['OSPCB', 'Odisha'],
+  ['TSPCB', 'Telangana'],
+  ['CECB', 'Chhattisgarh'],
+  ['CSPCB', 'Chhattisgarh'],
+  ['Kerala PCB', 'Kerala'],
+  ['PCBA', 'Assam'],
+  ['APCB', 'Assam'],
+  ['Manipur PCB', 'Manipur'],
+  ['Meghalaya PCB', 'Meghalaya'],
+  ['Tripura SPCB', 'Tripura'],
+  ['UKPCB', 'Uttarakhand'],
+  ['HPPCB', 'Himachal Pradesh'],
+  ['JKPCC', 'Jammu and Kashmir'],
+  ['JKSPCB', 'Jammu and Kashmir'],
+  ['JKPCB', 'Jammu and Kashmir'],
+  ['CPCC', 'Chandigarh'],
+  ['GPCB', 'Gujarat'],
+  ['JSPCB', 'Jharkhand'],
+  ['SSPCB', 'Sikkim'],
+  ['NPCB', 'Nagaland'],
+  ['Mizoram PCB', 'Mizoram'],
+  ['PPCC', 'Puducherry'],
+  ['ANPCC', 'Andaman and Nicobar Islands'],
+  ['LPCC', 'Ladakh'],
+];
+
+const CITY_STATE_MAP = {
+  // Haryana
+  'gurugram': 'Haryana', 'gurgaon': 'Haryana', 'faridabad': 'Haryana', 'rohtak': 'Haryana',
+  'panchkula': 'Haryana', 'ambala': 'Haryana', 'karnal': 'Haryana', 'panipat': 'Haryana',
+  'hisar': 'Haryana', 'sonipat': 'Haryana', 'yamunanagar': 'Haryana', 'manesar': 'Haryana',
+  'bahadurgarh': 'Haryana', 'bhiwani': 'Haryana', 'charkhi dadri': 'Haryana', 'fatehabad': 'Haryana',
+  'jind': 'Haryana', 'kaithal': 'Haryana', 'kurukshetra': 'Haryana', 'palwal': 'Haryana',
+  'sirsa': 'Haryana', 'dharuhera': 'Haryana',
+
+  // Punjab
+  'amritsar': 'Punjab', 'ludhiana': 'Punjab', 'jalandhar': 'Punjab', 'patiala': 'Punjab',
+  'bathinda': 'Punjab', 'mandi gobindgarh': 'Punjab', 'rupnagar': 'Punjab', 'khanna': 'Punjab',
+
+  // Chandigarh & Delhi
+  'chandigarh': 'Chandigarh', 'delhi': 'Delhi', 'new delhi': 'Delhi',
+
+  // Uttar Pradesh
+  'agra': 'Uttar Pradesh', 'kanpur': 'Uttar Pradesh', 'lucknow': 'Uttar Pradesh', 'varanasi': 'Uttar Pradesh',
+  'noida': 'Uttar Pradesh', 'greater noida': 'Uttar Pradesh', 'ghaziabad': 'Uttar Pradesh', 'meerut': 'Uttar Pradesh',
+  'prayagraj': 'Uttar Pradesh', 'allahabad': 'Uttar Pradesh', 'bareilly': 'Uttar Pradesh', 'aligarh': 'Uttar Pradesh',
+  'moradabad': 'Uttar Pradesh', 'saharanpur': 'Uttar Pradesh', 'gorakhpur': 'Uttar Pradesh', 'firozabad': 'Uttar Pradesh',
+  'jhansi': 'Uttar Pradesh', 'muzaffarnagar': 'Uttar Pradesh', 'mathura': 'Uttar Pradesh', 'ayodhya': 'Uttar Pradesh',
+  'baghpat': 'Uttar Pradesh', 'bulandshahr': 'Uttar Pradesh', 'hapur': 'Uttar Pradesh', 'raebareli': 'Uttar Pradesh',
+  'vrindavan': 'Uttar Pradesh',
+
+  // Rajasthan
+  'jaipur': 'Rajasthan', 'jodhpur': 'Rajasthan', 'kota': 'Rajasthan', 'ajmer': 'Rajasthan',
+  'bikaner': 'Rajasthan', 'udaipur': 'Rajasthan', 'alwar': 'Rajasthan', 'bhiwadi': 'Rajasthan',
+
+  // Maharashtra
+  'mumbai': 'Maharashtra', 'pune': 'Maharashtra', 'nagpur': 'Maharashtra', 'nashik': 'Maharashtra',
+  'solapur': 'Maharashtra', 'thane': 'Maharashtra', 'chandrapur': 'Maharashtra', 'navi mumbai': 'Maharashtra',
+  'ahmednagar': 'Maharashtra', 'akola': 'Maharashtra', 'amravati': 'Maharashtra', 'badlapur': 'Maharashtra',
+
+  // Karnataka
+  'bengaluru': 'Karnataka', 'bangalore': 'Karnataka', 'mysuru': 'Karnataka', 'hubballi': 'Karnataka',
+  'dharwad': 'Karnataka', 'kalaburagi': 'Karnataka',
+
+  // Tamil Nadu
+  'chennai': 'Tamil Nadu', 'coimbatore': 'Tamil Nadu', 'madurai': 'Tamil Nadu', 'salem': 'Tamil Nadu',
+  'tiruchirappalli': 'Tamil Nadu',
+
+  // West Bengal
+  'kolkata': 'West Bengal', 'howrah': 'West Bengal', 'asansol': 'West Bengal', 'durgapur': 'West Bengal',
+  'haldia': 'West Bengal', 'siliguri': 'West Bengal',
+
+  // Telangana & Andhra Pradesh
+  'hyderabad': 'Telangana', 'visakhapatnam': 'Andhra Pradesh', 'vijayawada': 'Andhra Pradesh',
+  'amaravati': 'Andhra Pradesh', 'tirupati': 'Andhra Pradesh',
+
+  // Bihar
+  'patna': 'Bihar', 'gaya': 'Bihar', 'muzaffarpur': 'Bihar', 'bhagalpur': 'Bihar',
+
+  // Gujarat
+  'ahmedabad': 'Gujarat', 'surat': 'Gujarat', 'vadodara': 'Gujarat', 'rajkot': 'Gujarat',
+  'gandhinagar': 'Gujarat', 'vapi': 'Gujarat', 'ankleshwar': 'Gujarat',
+
+  // Madhya Pradesh
+  'bhopal': 'Madhya Pradesh', 'indore': 'Madhya Pradesh', 'gwalior': 'Madhya Pradesh',
+  'jabalpur': 'Madhya Pradesh', 'ujjain': 'Madhya Pradesh', 'satna': 'Madhya Pradesh',
+
+  // Others
+  'bhubaneswar': 'Odisha', 'ranchi': 'Jharkhand', 'dhanbad': 'Jharkhand', 'raipur': 'Chhattisgarh',
+  'thiruvananthapuram': 'Kerala', 'kochi': 'Kerala', 'guwahati': 'Assam', 'dehradun': 'Uttarakhand',
+  'shimla': 'Himachal Pradesh', 'srinagar': 'Jammu and Kashmir', 'jammu': 'Jammu and Kashmir',
+  'leh': 'Ladakh', 'panaji': 'Goa', 'agartala': 'Tripura', 'aizawl': 'Mizoram', 'imphal': 'Manipur',
+  'shillong': 'Meghalaya', 'naharlagun': 'Arunachal Pradesh', 'puducherry': 'Puducherry',
+};
+
 export function extractCity(loc) {
   if (loc.locality && loc.locality.trim() && loc.locality.trim().length > 2) {
     return loc.locality.trim();
@@ -105,19 +215,36 @@ export function extractCity(loc) {
   if (parts.length > 1 && parts[1].length > 2 && parts[1].length < 30) {
     return parts[1];
   }
-  return 'India';
+  return 'Delhi';
 }
 
 export function extractState(loc) {
-  const city = extractCity(loc);
-  if (city.toLowerCase().includes('delhi')) return 'Delhi';
-  if (city.toLowerCase().includes('mumbai') || city.toLowerCase().includes('pune') || city.toLowerCase().includes('nagpur')) return 'Maharashtra';
-  if (city.toLowerCase().includes('bengaluru') || city.toLowerCase().includes('bangalore')) return 'Karnataka';
-  if (city.toLowerCase().includes('chennai') || city.toLowerCase().includes('coimbatore')) return 'Tamil Nadu';
-  if (city.toLowerCase().includes('kolkata') || city.toLowerCase().includes('howrah')) return 'West Bengal';
-  if (city.toLowerCase().includes('hyderabad')) return 'Telangana';
-  if (city.toLowerCase().includes('jaipur') || city.toLowerCase().includes('jodhpur') || city.toLowerCase().includes('kota')) return 'Rajasthan';
-  if (city.toLowerCase().includes('lucknow') || city.toLowerCase().includes('kanpur') || city.toLowerCase().includes('noida') || city.toLowerCase().includes('ghaziabad')) return 'Uttar Pradesh';
+  const name = loc.name || '';
+  // 1. Boundary-safe PCB code detection
+  for (const [code, state] of PCB_TO_STATE) {
+    const re = new RegExp(`([^a-zA-Z]|^)${code}([^a-zA-Z]|$)`, 'i');
+    if (re.test(name)) return state;
+  }
+
+  // 2. City name mapping
+  const city = extractCity(loc).toLowerCase().trim();
+  if (CITY_STATE_MAP[city]) return CITY_STATE_MAP[city];
+
+  for (const [knownCity, state] of Object.entries(CITY_STATE_MAP)) {
+    const re = new RegExp(`\\b${knownCity}\\b`, 'i');
+    if (re.test(name)) return state;
+  }
+
+  // 3. Coordinate bounding box fallback
+  const lat = parseFloat(loc.coordinates?.latitude);
+  const lon = parseFloat(loc.coordinates?.longitude);
+  if (isFinite(lat) && isFinite(lon)) {
+    if (lat >= 28.4 && lat <= 28.9 && lon >= 76.8 && lon <= 77.4) return 'Delhi';
+    if (lat >= 32.5 && lat <= 35.0 && lon >= 74.0 && lon <= 76.5) return 'Jammu and Kashmir';
+    if (lat >= 12.8 && lat <= 13.2 && lon >= 77.4 && lon <= 77.8) return 'Karnataka';
+    if (lat >= 12.8 && lat <= 13.3 && lon >= 80.0 && lon <= 80.4) return 'Tamil Nadu';
+  }
+
   return loc.country?.name || 'India';
 }
 

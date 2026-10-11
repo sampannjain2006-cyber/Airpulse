@@ -1,4 +1,4 @@
-import { findAllStations, findStationById, findStationByCode } from '../models/stationModel.js';
+import { findAllStations, findStationById, findStationByCode, findStationHierarchy } from '../models/stationModel.js';
 
 /**
  * List stations, optionally filtered.
@@ -10,6 +10,19 @@ export async function listStations({ city, state, limit, scope, dashboardOnly } 
     stations: rows,
   };
 }
+
+/**
+ * Get state and city hierarchy for monitoring stations.
+ */
+export async function getStationHierarchy() {
+  const states = await findStationHierarchy();
+  return {
+    total_states: states.length,
+    states,
+  };
+}
+
+export const listStationHierarchy = async () => (await getStationHierarchy()).states;
 
 /**
  * Get a single station by ID or station_code.

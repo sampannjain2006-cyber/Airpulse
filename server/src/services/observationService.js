@@ -152,7 +152,241 @@ export async function getObservationsSnapshot(dateStr) {
   };
 }
 
+import { fetchAirQuality, isGoogleConfigured } from './googleService.js';
+import { env } from '../config/env.js';
+import { getPool } from '../config/db.js';
+
 export async function getDateRange() {
   return await getObservationsDateRange();
+}
+
+/**
+ * OpenAQ-first current-date monitoring with Google Air Quality fallback.
+ *
+ * 1. Checks latest OpenAQ ground observation for station.
+ * 2. If fresh (<= freshnessHours, default 24h) and contains measurements, returns OpenAQ observed data.
+ * 3. If missing or stale (>24h), attempts Google Air Quality API current conditions when configured.
+ * 4. Google data is strictly labelled data_type: 'modelled'.
+ * 5. If Google is unconfigured/disabled/fails, returns honest stale or unavailable state.
+ * 6. Never invents measurements or sets missing pollutants to 0.
+ *
+ * @param {number|string} stationIdParam
+ * @param {object} [options]
+ * @param {boolean} [options.disableGoogle=false]
+ * @param {number} [options.freshnessHours=24]
+ */
+export async function getStationCurrentCondition(stationIdParam, { disableGoogle = false, freshnessHours = 24 } = {}) {
+  const stationId = parseInt(stationIdParam, 10);
+  if (isNaN(stationId)) {
+    const err = new Error(`Invalid station_id: '${stationIdParam}'. Must be a numeric ID.`);
+    err.statusCode = 400;
+    throw err;
+  }
+
+  const station = await findStationById(stationId);
+  if (!station) {
+    const err = new Error(`Station not found: ${stationId}`);
+    err.statusCode = 404;
+    throw err;
+  }
+
+  const pool = getPool();
+  const obsRes = await pool.query(
+    `SELECT
+       o.id, o.station_id, o.recorded_at, o.aqi, o.aqi_category,
+       o.pm25, o.pm10, o.no2, o.so2, o.co, o.o3,
+       o.temperature, o.humidity, o.pressure,
+       o.source, o.ingested_at
+     FROM environmental_observations o
+     WHERE o.station_id = $1
+     ORDER BY o.recorded_at DESC
+     LIMIT 1;`,
+    [stationId]
+  );
+  const obs = obsRes.rows[0] || null;
+
+  let ageHours = null;
+  let isFresh = false;
+  const threshold = Number(freshnessHours) || 24;
+
+  if (obs?.recorded_at) {
+    const recTime = new Date(obs.recorded_at).getTime();
+    if (!isNaN(recTime)) {
+      ageHours = (Date.now() - recTime) / (1000 * 60 * 60);
+      isFresh = ageHours <= threshold;
+    }
+  }
+
+  const hasReadings = obs && (obs.pm25 !== null || obs.aqi !== null || obs.pm10 !== null || obs.no2 !== null);
+
+  // 1. Prefer fresh OpenAQ ground observation
+  if (obs && hasReadings && isFresh) {
+    return {
+      station_id: station.id,
+      station_code: station.station_code,
+      station_name: station.name,
+      city: station.city,
+      state: station.state,
+      latitude: station.latitude,
+      longitude: station.longitude,
+      data_type: 'observed',
+      provenance: {
+        data_type: 'observed',
+        source: 'OpenAQ ground observation',
+        provider: 'OpenAQ v3 Ground Station Network',
+        is_modelled: false,
+      },
+      source: 'OpenAQ ground observation',
+      provider: 'OpenAQ v3 Ground Station Network',
+      recorded_at: obs.recorded_at,
+      age_hours: ageHours ? Math.round(ageHours * 10) / 10 : null,
+      is_fresh: true,
+      aqi: obs.aqi != null ? parseFloat(obs.aqi) : null,
+      aqi_category: obs.aqi_category,
+      pm25: obs.pm25 != null ? parseFloat(obs.pm25) : null,
+      pm10: obs.pm10 != null ? parseFloat(obs.pm10) : null,
+      no2: obs.no2 != null ? parseFloat(obs.no2) : null,
+      so2: obs.so2 != null ? parseFloat(obs.so2) : null,
+      co: obs.co != null ? parseFloat(obs.co) : null,
+      o3: obs.o3 != null ? parseFloat(obs.o3) : null,
+      temperature: obs.temperature != null ? parseFloat(obs.temperature) : null,
+      humidity: obs.humidity != null ? parseFloat(obs.humidity) : null,
+      pressure: obs.pressure != null ? parseFloat(obs.pressure) : null,
+      fallback_applied: false,
+      status: 'success',
+    };
+  }
+
+  // 2. OpenAQ is missing or stale: Attempt Google Air Quality current conditions fallback
+  const shouldAttemptGoogle =
+    !disableGoogle &&
+    disableGoogle !== 'true' &&
+    !env.DISABLE_GOOGLE_FALLBACK &&
+    isGoogleConfigured() &&
+    station.latitude != null &&
+    station.longitude != null;
+
+  if (shouldAttemptGoogle) {
+    try {
+      const googleRes = await fetchAirQuality(station.latitude, station.longitude);
+      if (googleRes && googleRes.available && googleRes.status === 'success') {
+        return {
+          station_id: station.id,
+          station_code: station.station_code,
+          station_name: station.name,
+          city: station.city,
+          state: station.state,
+          latitude: station.latitude,
+          longitude: station.longitude,
+          data_type: 'modelled',
+          provenance: {
+            data_type: 'modelled',
+            source: 'Google Air Quality API',
+            provider: 'Google Air Quality Modelled Interpolation',
+            is_modelled: true,
+          },
+          source: 'Google Air Quality API',
+          provider: 'Google Air Quality Modelled Interpolation',
+          data_type_label: 'Google Modelled / Spatial Interpolation',
+          recorded_at: googleRes.date_time,
+          age_hours: 0,
+          is_fresh: true,
+          fallback_applied: true,
+          fallback_reason: obs
+            ? `OpenAQ observation is stale (${ageHours ? ageHours.toFixed(1) : '?'}h old > ${threshold}h threshold).`
+            : 'No OpenAQ ground observation recorded for this station.',
+          openaq_stale_observation: obs
+            ? {
+                recorded_at: obs.recorded_at,
+                age_hours: ageHours ? Math.round(ageHours * 10) / 10 : null,
+                pm25: obs.pm25 != null ? parseFloat(obs.pm25) : null,
+                aqi: obs.aqi != null ? parseFloat(obs.aqi) : null,
+              }
+            : null,
+          universal_aqi: googleRes.universal_aqi,
+          local_aqi: googleRes.local_aqi,
+          aqi: googleRes.local_aqi?.aqi ?? googleRes.universal_aqi?.aqi ?? null,
+          aqi_category: googleRes.local_aqi?.category ?? googleRes.universal_aqi?.category ?? null,
+          pm25: googleRes.pm25,
+          pm10: googleRes.pm10,
+          no2: googleRes.no2,
+          so2: googleRes.so2,
+          co: googleRes.co,
+          o3: googleRes.o3,
+          temperature: null,
+          humidity: null,
+          pressure: null,
+          pollutants: googleRes.pollutants,
+          health_recommendations: googleRes.health_recommendations,
+          cached: Boolean(googleRes.cached),
+          status: 'success',
+        };
+      }
+    } catch (gErr) {
+      console.warn(`[ObservationService] Google fallback error for station ${stationId}:`, gErr.message);
+    }
+  }
+
+  // 3. Stale OpenAQ data fallback (honest label)
+  if (obs && hasReadings) {
+    return {
+      station_id: station.id,
+      station_code: station.station_code,
+      station_name: station.name,
+      city: station.city,
+      state: station.state,
+      latitude: station.latitude,
+      longitude: station.longitude,
+      data_type: 'observed',
+      provenance: {
+        data_type: 'observed',
+        source: 'OpenAQ (stale)',
+        provider: 'OpenAQ v3 Ground Station Network',
+        is_modelled: false,
+      },
+      source: 'OpenAQ (stale)',
+      provider: 'OpenAQ v3 Ground Station Network',
+      recorded_at: obs.recorded_at,
+      age_hours: ageHours ? Math.round(ageHours * 10) / 10 : null,
+      is_fresh: false,
+      fallback_applied: false,
+      warning: `Telemetry is stale (${ageHours ? ageHours.toFixed(1) : '?'}h old > ${threshold}h threshold). Google Air Quality fallback was not applied (${!isGoogleConfigured() ? 'GOOGLE_MAPS_API_KEY unconfigured' : disableGoogle ? 'disabled by query parameter' : 'service unavailable'}).`,
+      aqi: obs.aqi != null ? parseFloat(obs.aqi) : null,
+      aqi_category: obs.aqi_category,
+      pm25: obs.pm25 != null ? parseFloat(obs.pm25) : null,
+      pm10: obs.pm10 != null ? parseFloat(obs.pm10) : null,
+      no2: obs.no2 != null ? parseFloat(obs.no2) : null,
+      so2: obs.so2 != null ? parseFloat(obs.so2) : null,
+      co: obs.co != null ? parseFloat(obs.co) : null,
+      o3: obs.o3 != null ? parseFloat(obs.o3) : null,
+      temperature: obs.temperature != null ? parseFloat(obs.temperature) : null,
+      humidity: obs.humidity != null ? parseFloat(obs.humidity) : null,
+      pressure: obs.pressure != null ? parseFloat(obs.pressure) : null,
+      status: 'stale',
+    };
+  }
+
+  // 4. Honest missing/unavailable state
+  return {
+    station_id: station.id,
+    station_code: station.station_code,
+    station_name: station.name,
+    city: station.city,
+    state: station.state,
+    latitude: station.latitude,
+    longitude: station.longitude,
+    data_type: 'unavailable',
+    provenance: {
+      data_type: 'unavailable',
+      source: null,
+      provider: null,
+      is_modelled: false,
+    },
+    source: null,
+    is_fresh: false,
+    fallback_applied: false,
+    status: 'unavailable',
+    message: 'Current air quality telemetry is unavailable from OpenAQ ground station and Google Air Quality fallback.',
+  };
 }
 

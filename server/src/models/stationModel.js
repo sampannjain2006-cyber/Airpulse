@@ -70,6 +70,46 @@ export async function findAllStations({ city, state, limit = 200, dashboardOnly 
 }
 
 /**
+ * Retrieve authoritative state and city hierarchy from the station registry.
+ * Guarantees distinct grouping of cities by state to eliminate duplicate-city ambiguity.
+ */
+export async function findStationHierarchy() {
+  const pool = getPool();
+  const sql = `
+    SELECT
+      state,
+      city,
+      count(*)::int AS station_count,
+      bool_or(is_dashboard_station) AS has_dashboard_station
+    FROM monitoring_stations
+    WHERE is_active = TRUE
+    GROUP BY state, city
+    ORDER BY state ASC, city ASC;
+  `;
+  const { rows } = await pool.query(sql);
+
+  const stateMap = new Map();
+  for (const row of rows) {
+    if (!stateMap.has(row.state)) {
+      stateMap.set(row.state, {
+        state: row.state,
+        station_count: 0,
+        cities: [],
+      });
+    }
+    const stateObj = stateMap.get(row.state);
+    stateObj.station_count += row.station_count;
+    stateObj.cities.push({
+      city: row.city,
+      station_count: row.station_count,
+      has_dashboard_station: row.has_dashboard_station,
+    });
+  }
+
+  return Array.from(stateMap.values());
+}
+
+/**
  * Fetch a single station by numeric ID.
  * @param {number} id
  */

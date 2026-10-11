@@ -17,6 +17,12 @@ import {
   CPCB_PM25_THRESHOLDS,
   getCpcbPm25Category,
 } from '../utils/indianAdministrative';
+import {
+  getCurrentDateInKolkata,
+  getForecastTargetDates,
+  formatForecastDateDisplay,
+  APP_TIMEZONE,
+} from '../utils/dateUtils';
 
 interface ForecastsViewProps {
   stations: Station[];
@@ -43,9 +49,18 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
   const [selectedCity, setSelectedCity] = useState<string>('');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
+  // Maximum selectable reference date: current calendar date in Asia/Kolkata (Task 2)
+  const maxSelectableDate = useMemo(() => getCurrentDateInKolkata(), []);
+
+  // Reference date: defaults to current calendar date in Asia/Kolkata
+  const [referenceDate, setReferenceDate] = useState<string>(() => getCurrentDateInKolkata());
+
   // 5-Day Horizon & Timeline state
   const [horizon, setHorizon] = useState<PredictionHorizonResponse | null>(null);
-  const [selectedDate, setSelectedDate] = useState<string>('2026-10-03');
+  const [selectedDate, setSelectedDate] = useState<string>(() => {
+    const targets = getForecastTargetDates(getCurrentDateInKolkata(), 5);
+    return targets[0];
+  });
   const [selectedDayIndex, setSelectedDayIndex] = useState<number>(1);
 
   // Snapshot of predictions for all stations on the selected date
@@ -70,14 +85,14 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
     }
   }, [initialSelectedStation]);
 
-  // 1. Fetch Horizon once on mount
+  // 1. Fetch Horizon whenever referenceDate changes
   useEffect(() => {
     predictionsApi
-      .getHorizon()
+      .getHorizon(referenceDate)
       .then((h) => {
         setHorizon(h);
         if (h.allowed_dates && h.allowed_dates.length > 0) {
-          // Default to first date in horizon if current selected date is not in allowed dates
+          // If current selected target date is not in allowed dates, reset to Day 1
           if (!h.allowed_dates.includes(selectedDate)) {
             setSelectedDate(h.allowed_dates[0]);
             setSelectedDayIndex(1);
@@ -85,16 +100,16 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
         }
       })
       .catch((err) => console.warn('[ForecastsView] Horizon error:', err.message));
-  }, []);
+  }, [referenceDate]);
 
-  // 2. Fetch Snapshot across all stations whenever date or model changes
+  // 2. Fetch Snapshot across all stations whenever target date, model, or referenceDate changes
   useEffect(() => {
     if (!selectedDate) return;
     setSnapshotLoading(true);
     setSnapshotError(null);
 
     predictionsApi
-      .snapshot(selectedDate, selectedModel)
+      .snapshot(selectedDate, selectedModel, referenceDate)
       .then((res) => {
         setSnapshot(res);
         setSnapshotLoading(false);
@@ -111,16 +126,16 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
         setSnapshotError(msg);
         setSnapshotLoading(false);
       });
-  }, [selectedDate, selectedModel]);
+  }, [selectedDate, selectedModel, referenceDate]);
 
-  // 3. Fetch Selected Station 5-Day Forecast whenever station or model changes
+  // 3. Fetch Selected Station 5-Day Forecast whenever station, model, or referenceDate changes
   useEffect(() => {
     if (!selectedStationId) return;
     setForecastLoading(true);
     setForecastError(null);
 
     predictionsApi
-      .getStationForecast(selectedStationId, selectedModel)
+      .getStationForecast(selectedStationId, selectedModel, referenceDate)
       .then((res) => {
         setForecast(res);
         setForecastLoading(false);
@@ -137,7 +152,7 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
         setForecast(null);
         setForecastLoading(false);
       });
-  }, [selectedStationId, selectedModel]);
+  }, [selectedStationId, selectedModel, referenceDate]);
 
   // Handler to select a station (updates state and notifies parent)
   const handleSelectStation = useCallback(
@@ -284,13 +299,12 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
     },
   ];
 
-  const allowedHorizonDates = horizon?.allowed_dates || [
-    '2026-10-03',
-    '2026-10-04',
-    '2026-10-05',
-    '2026-10-06',
-    '2026-10-07',
-  ];
+  const allowedHorizonDates = useMemo(() => {
+    if (horizon?.allowed_dates && horizon.allowed_dates.length > 0) {
+      return horizon.allowed_dates.slice(0, 5);
+    }
+    return getForecastTargetDates(referenceDate, 5);
+  }, [horizon, referenceDate]);
 
   return (
     <div className="nature-page-container forecasts-page">
@@ -334,7 +348,9 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
           <span className="stat-label">Forecast Horizon</span>
           <span className="stat-val">{horizon?.horizon_days || 5} Days Ahead</span>
           <span className="stat-hint">
-            {horizon ? `${horizon.min_date} to ${horizon.max_date}` : 'T+1 through T+5'}
+            {allowedHorizonDates.length > 0
+              ? `${allowedHorizonDates[0]} to ${allowedHorizonDates[allowedHorizonDates.length - 1]}`
+              : 'T+1 through T+5'}
           </span>
         </div>
 
@@ -367,28 +383,48 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
         </div>
       </div>
 
-      {/* 3. Five-Day Forecast Timeline Date Selector */}
+      {/* 3. Five-Day Forecast Timeline Date Selector & Reference Date Control (Task 2) */}
       <div className="forecast-timeline-container">
         <div className="timeline-header-row">
-          <span className="timeline-title">
-            <span>📅</span> Five-Day Forecast Horizon (Select Target Date)
-          </span>
-          <span className="timeline-reference-tag">
-            Baseline Date: {horizon?.reference_date || '2026-10-02'}
-          </span>
+          <div className="timeline-title-wrap">
+            <span className="timeline-title">
+              <span>📅</span> Five-Day Forecast Horizon (Select Target Date)
+            </span>
+            <div className="reference-date-picker-wrap">
+              <label htmlFor="reference-date-picker" className="ref-date-label">
+                As-Of Reference Date:
+              </label>
+              <input
+                id="reference-date-picker"
+                type="date"
+                className="nature-input ref-date-input"
+                value={referenceDate}
+                max={maxSelectableDate}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (val && val <= maxSelectableDate) {
+                    setReferenceDate(val);
+                  }
+                }}
+                aria-label="Select reference date up to current date"
+              />
+              <span className="ref-date-hint">
+                (Max: {maxSelectableDate}, {APP_TIMEZONE})
+              </span>
+            </div>
+          </div>
+          <div className="timeline-reference-tag">
+            <span>Reference: <strong>{referenceDate}</strong></span>
+            <span className="tag-sep">·</span>
+            <span>Targets: Day 1 ({allowedHorizonDates[0]}) to Day 5 ({allowedHorizonDates[4] || allowedHorizonDates[allowedHorizonDates.length - 1]})</span>
+          </div>
         </div>
 
         <div className="forecast-days-row" role="tablist" aria-label="Forecast 5-Day Horizon">
-          {allowedHorizonDates.map((dateStr, idx) => {
+          {allowedHorizonDates.slice(0, 5).map((dateStr, idx) => {
             const dayNum = idx + 1;
             const isSelected = selectedDate === dateStr;
-            const dateObj = new Date(dateStr + 'T00:00:00Z');
-            const dayName = dateObj.toLocaleDateString('en-IN', { weekday: 'short', timeZone: 'UTC' });
-            const monthDay = dateObj.toLocaleDateString('en-IN', {
-              month: 'short',
-              day: 'numeric',
-              timeZone: 'UTC',
-            });
+            const { dayName, monthDay } = formatForecastDateDisplay(dateStr);
 
             return (
               <button
