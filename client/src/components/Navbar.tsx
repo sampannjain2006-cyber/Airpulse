@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { SystemStatus } from '../types/meta';
 import { metaApi } from '../api/meta';
+import { useTheme, THEME_OPTIONS } from '../context/ThemeContext';
 
 export type AppView =
   | 'overview'
@@ -34,8 +35,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentView,
   onViewChange,
   stationCount,
-  activeReadingCount,
-  lastUpdatedText,
+  activeReadingCount: _activeReadingCount,
+  lastUpdatedText: _lastUpdatedText,
   onToggleAlerts,
   alertCount,
   alertsLoading,
@@ -45,10 +46,17 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleRoutePlanner,
   activeRoutePlanCount,
 }) => {
-  const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
+  const [, setSystemStatus] = useState<SystemStatus | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [toolsDropdownOpen, setToolsDropdownOpen] = useState(false);
+  const [themeDropdownOpen, setThemeDropdownOpen] = useState(false);
 
+  const { theme, setTheme } = useTheme();
+
+  const toolsRef = useRef<HTMLDivElement>(null);
+  const themeRef = useRef<HTMLDivElement>(null);
+
+  // Preserve underlying background health check & PostGIS status API polling
   useEffect(() => {
     let mounted = true;
     const fetchStatus = () => {
@@ -81,7 +89,36 @@ export const Navbar: React.FC<NavbarProps> = ({
     };
   }, []);
 
-  const navItems: Array<{ id: AppView; label: string; icon: string; count?: number }> = [
+  // Close menus on click outside & ESC
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setToolsDropdownOpen(false);
+        setThemeDropdownOpen(false);
+        setMobileMenuOpen(false);
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (toolsRef.current && !toolsRef.current.contains(target)) {
+        setToolsDropdownOpen(false);
+      }
+      if (themeRef.current && !themeRef.current.contains(target)) {
+        setThemeDropdownOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  // Primary navigation views in requested order
+  const primaryNavItems: Array<{ id: AppView; label: string; icon: string; count?: number }> = [
     { id: 'overview', label: 'Overview', icon: '🌿' },
     { id: 'live', label: 'Live Monitoring', icon: '📍', count: stationCount },
     { id: 'historical', label: 'Historical Trends', icon: '📈' },
@@ -90,13 +127,23 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'pollutants', label: 'Pollutant Guide', icon: '📖' },
   ];
 
-  const isDbConnected = systemStatus?.database?.status === 'connected';
-
   return (
     <header className="nature-header" role="banner">
       <div className="nature-header-container">
-        {/* Brand Area */}
-        <div className="nature-brand" onClick={() => onViewChange('overview')} role="button" tabIndex={0}>
+        {/* 1. AirPulse Logo & Branding */}
+        <div
+          className="nature-brand"
+          onClick={() => onViewChange('overview')}
+          role="button"
+          tabIndex={0}
+          aria-label="AirPulse Home - Go to Overview"
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              onViewChange('overview');
+            }
+          }}
+        >
           <div className="nature-brand-icon-wrap" aria-hidden="true">
             <svg
               className="nature-brand-leaf-svg"
@@ -122,9 +169,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Primary Desktop Navigation */}
+        {/* Primary Desktop Navigation (Exact order: 2. Overview through 11. Theme) */}
         <nav className="nature-nav-desktop" aria-label="Main Navigation">
-          {navItems.map((item) => {
+          {/* 2 to 7: Primary Views */}
+          {primaryNavItems.map((item) => {
             const isActive = currentView === item.id;
             return (
               <button
@@ -144,73 +192,53 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             );
           })}
-        </nav>
 
-        {/* Header Right Status & Tools */}
-        <div className="nature-header-actions">
-          {/* Freshness / Telemetry Badge */}
-          <div className="nature-pill telemetry-freshness-pill" title="Telemetry data freshness status">
-            <span className="pulse-indicator healthy" aria-hidden="true" />
-            <span className="pill-text">
-              {activeReadingCount} Active Feeds
-            </span>
-            {lastUpdatedText && (
-              <span className="pill-subtext hidden-mobile">· {lastUpdatedText}</span>
-            )}
-          </div>
-
-          {/* Backend Connection Health */}
-          <div
-            className={`nature-pill connection-pill ${isDbConnected ? 'connected' : 'error'}`}
-            title={`Backend: ${systemStatus?.service || 'Connecting...'} | Database: ${systemStatus?.database?.status || 'Unknown'} (PostGIS ${systemStatus?.database?.postgis?.available ? 'Active' : 'N/A'})`}
-          >
-            <span
-              className={`status-dot ${isDbConnected ? 'online' : 'offline'}`}
-              aria-hidden="true"
-            />
-            <span className="connection-text">
-              {isDbConnected ? 'PostGIS Active' : 'Connecting...'}
-            </span>
-          </div>
-
-          {/* Automated Environmental Alerts Badge / Toggle */}
+          {/* 8. Alerts */}
           {onToggleAlerts && (
             <button
-              className="nature-pill alert-btn-pill"
+              className={`nature-nav-link nav-item-alerts ${(alertCount || 0) > 0 ? 'has-active-alerts' : ''}`}
               onClick={onToggleAlerts}
               title="Automated Environmental Alerts & Threshold Monitoring (CPCB NAQI Standards)"
-              style={{ cursor: 'pointer' }}
+              aria-label={`Environmental Alerts: ${alertCount || 0} active`}
             >
-              <span className={`status-dot ${(alertCount || 0) > 0 ? 'offline' : 'online'}`} />
-              <span className="pill-text">
-                {alertsLoading ? 'Scanning…' : `${alertCount || 0} Alerts`}
+              <span className="nav-item-icon" aria-hidden="true">🚨</span>
+              <span className="nav-item-label">
+                {alertsLoading ? 'Scanning…' : 'Alerts'}
               </span>
+              {alertCount !== undefined && alertCount > 0 && (
+                <span className="nav-item-badge alert-count-badge">{alertCount}</span>
+              )}
             </button>
           )}
 
-          {/* Context-Aware Precaution Recommendations Button */}
+          {/* 9. Precautions */}
           {onOpenRecommendations && (
             <button
-              className="nature-pill rec-btn-pill"
+              className="nature-nav-link nav-item-precautions"
               onClick={onOpenRecommendations}
-              title="Context-Aware Environmental Precaution Recommendations (WHO & CPCB Public Health Guidance)"
-              style={{ cursor: 'pointer' }}
+              title="Context-Aware Environmental Precaution Recommendations (WHO & CPCB Guidance)"
+              aria-label="View Recommended Health Precautions"
             >
-              <span className="pill-text">🛡 Precautions</span>
+              <span className="nav-item-icon" aria-hidden="true">🛡</span>
+              <span className="nav-item-label">Precautions</span>
             </button>
           )}
 
-          {/* Tools Menu (Geo Lookup & OpenAQ) */}
-          <div className="nature-tools-menu-wrap">
+          {/* 10. Tools Dropdown */}
+          <div className="nature-tools-menu-wrap" ref={toolsRef}>
             <button
-              className={`nature-btn-tool ${currentView === 'registry' || currentView === 'coordinates' ? 'active' : ''}`}
-              onClick={() => setToolsDropdownOpen(!toolsDropdownOpen)}
+              className={`nature-nav-link nature-btn-tool ${currentView === 'registry' || currentView === 'coordinates' ? 'active' : ''}`}
+              onClick={() => {
+                setToolsDropdownOpen(!toolsDropdownOpen);
+                setThemeDropdownOpen(false);
+              }}
               aria-expanded={toolsDropdownOpen}
               aria-haspopup="true"
-              title="Spatial Tools: Geographic lookup & OpenAQ Registry"
+              title="Spatial Tools: Geographic lookup, OpenAQ Registry, Waste Reuse, Store, Route Planner"
             >
-              <span>Tools</span>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+              <span className="nav-item-icon" aria-hidden="true">🛠</span>
+              <span className="nav-item-label">Tools</span>
+              <svg className="dropdown-caret-svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
                 <polyline points="6 9 12 15 18 9" />
               </svg>
             </button>
@@ -219,7 +247,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div
                 className="nature-dropdown-menu"
                 role="menu"
-                onMouseLeave={() => setToolsDropdownOpen(false)}
+                aria-label="Spatial and Impact Tools Menu"
               >
                 <button
                   className={`dropdown-item ${currentView === 'coordinates' ? 'active-item' : ''}`}
@@ -303,36 +331,97 @@ export const Navbar: React.FC<NavbarProps> = ({
             )}
           </div>
 
-          {/* Mobile Menu Hamburger Toggle */}
-          <button
-            className="nature-mobile-toggle"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label={mobileMenuOpen ? 'Close Navigation Menu' : 'Open Navigation Menu'}
-            aria-expanded={mobileMenuOpen}
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              {mobileMenuOpen ? (
-                <>
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </>
-              ) : (
-                <>
-                  <line x1="4" y1="12" x2="20" y2="12" />
-                  <line x1="4" y1="6" x2="20" y2="6" />
-                  <line x1="4" y1="18" x2="20" y2="18" />
-                </>
-              )}
-            </svg>
-          </button>
-        </div>
+          {/* 11. Theme Switcher (Immediately after Tools) */}
+          <div className="nature-theme-menu-wrap" ref={themeRef}>
+            <button
+              className={`nature-nav-link nav-btn-theme ${themeDropdownOpen ? 'theme-active' : ''}`}
+              onClick={() => {
+                setThemeDropdownOpen(!themeDropdownOpen);
+                setToolsDropdownOpen(false);
+              }}
+              aria-expanded={themeDropdownOpen}
+              aria-haspopup="true"
+              title="Global Application Theme Switcher"
+              aria-label="Switch Theme"
+            >
+              <span className="nav-item-icon" aria-hidden="true">🎨</span>
+              <span className="nav-item-label">Theme</span>
+              <svg className="dropdown-caret-svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </button>
+
+            {themeDropdownOpen && (
+              <div
+                className="nature-dropdown-menu nature-theme-dropdown-menu"
+                role="menu"
+                aria-label="Select Application Theme"
+              >
+                <div className="theme-menu-header">
+                  <span className="theme-menu-title">APPLICATION THEME</span>
+                </div>
+                {THEME_OPTIONS.map((opt) => {
+                  const isSelected = theme === opt.id;
+                  return (
+                    <button
+                      key={opt.id}
+                      className={`theme-dropdown-item ${isSelected ? 'active-theme-item' : ''}`}
+                      role="menuitem"
+                      onClick={() => {
+                        setTheme(opt.id);
+                        setThemeDropdownOpen(false);
+                      }}
+                    >
+                      <div className="theme-color-swatches" aria-hidden="true">
+                        <span className="theme-swatch" style={{ background: opt.previewColors[0] }} />
+                        <span className="theme-swatch" style={{ background: opt.previewColors[1] }} />
+                        <span className="theme-swatch" style={{ background: opt.previewColors[2] }} />
+                      </div>
+                      <div className="theme-item-details">
+                        <div className="theme-item-name-row">
+                          <span className="theme-item-name">{opt.name}</span>
+                          {isSelected && <span className="theme-selected-badge">✓ Active</span>}
+                        </div>
+                        <span className="theme-item-desc">{opt.tagline}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </nav>
+
+        {/* Mobile Menu Hamburger Toggle */}
+        <button
+          className="nature-mobile-toggle"
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-label={mobileMenuOpen ? 'Close Navigation Menu' : 'Open Navigation Menu'}
+          aria-expanded={mobileMenuOpen}
+        >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            {mobileMenuOpen ? (
+              <>
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </>
+            ) : (
+              <>
+                <line x1="4" y1="12" x2="20" y2="12" />
+                <line x1="4" y1="6" x2="20" y2="6" />
+                <line x1="4" y1="18" x2="20" y2="18" />
+              </>
+            )}
+          </svg>
+        </button>
       </div>
 
       {/* Mobile Drawer Navigation */}
       {mobileMenuOpen && (
         <div className="nature-mobile-drawer" role="dialog" aria-modal="true">
           <nav className="nature-mobile-nav">
-            {navItems.map((item) => {
+            {/* Primary navigation items 2 through 7 */}
+            {primaryNavItems.map((item) => {
               const isActive = currentView === item.id;
               return (
                 <button
@@ -352,8 +441,37 @@ export const Navbar: React.FC<NavbarProps> = ({
               );
             })}
 
+            {/* 8. Alerts */}
+            {onToggleAlerts && (
+              <button
+                className="nature-mobile-nav-link"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onToggleAlerts();
+                }}
+              >
+                <span className="nav-item-icon">🚨</span>
+                <span>Environmental Alerts ({alertCount || 0})</span>
+              </button>
+            )}
+
+            {/* 9. Precautions */}
+            {onOpenRecommendations && (
+              <button
+                className="nature-mobile-nav-link"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  onOpenRecommendations();
+                }}
+              >
+                <span className="nav-item-icon">🛡</span>
+                <span>Health Precautions &amp; Actions</span>
+              </button>
+            )}
+
+            {/* 10. Tools Section */}
             <div className="mobile-tools-section">
-              <span className="mobile-tools-heading">Analytical Tools</span>
+              <span className="mobile-tools-heading">Analytical &amp; Impact Tools</span>
               <button
                 className={`nature-mobile-nav-link secondary ${currentView === 'coordinates' ? 'active' : ''}`}
                 onClick={() => {
@@ -375,31 +493,62 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>OpenAQ Network Registry</span>
               </button>
 
-              {onToggleAlerts && (
+              {onOpenWasteReuse && (
                 <button
                   className="nature-mobile-nav-link secondary"
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    onToggleAlerts();
+                    onOpenWasteReuse();
                   }}
                 >
-                  <span className="nav-item-icon">🚨</span>
-                  <span>Environmental Alerts ({alertCount || 0})</span>
+                  <span className="nav-item-icon">🏭</span>
+                  <span>Industrial Waste Reuse</span>
                 </button>
               )}
 
-              {onOpenRecommendations && (
+              {onOpenStore && (
                 <button
                   className="nature-mobile-nav-link secondary"
                   onClick={() => {
                     setMobileMenuOpen(false);
-                    onOpenRecommendations();
+                    onOpenStore();
                   }}
                 >
-                  <span className="nav-item-icon">🛡</span>
-                  <span>Health Precautions &amp; Actions</span>
+                  <span className="nav-item-icon">🛍</span>
+                  <span>Protection Store</span>
                 </button>
               )}
+
+              {onToggleRoutePlanner && (
+                <button
+                  className="nature-mobile-nav-link secondary"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onToggleRoutePlanner();
+                  }}
+                >
+                  <span className="nav-item-icon">🗺</span>
+                  <span>Route Planner</span>
+                </button>
+              )}
+            </div>
+
+            {/* 11. Theme Selection Section in Mobile */}
+            <div className="mobile-tools-section">
+              <span className="mobile-tools-heading">Application Theme</span>
+              {THEME_OPTIONS.map((opt) => (
+                <button
+                  key={opt.id}
+                  className={`nature-mobile-nav-link secondary ${theme === opt.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setTheme(opt.id);
+                    setMobileMenuOpen(false);
+                  }}
+                >
+                  <span className="nav-item-icon">🎨</span>
+                  <span>{opt.name} {theme === opt.id ? '✓' : ''}</span>
+                </button>
+              ))}
             </div>
           </nav>
         </div>

@@ -114,7 +114,7 @@ export interface LocationLookupResponse {
     configured: boolean;
     status: string;
     message?: string;
-    data?: any;
+    data?: Record<string, unknown> | null;
   };
   nearby_openaq_reference: NearbyOpenAQReference[];
 }

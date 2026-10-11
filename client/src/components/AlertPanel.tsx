@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { EnvironmentalAlert, AlertSummaryResponse } from '../types/alert';
+import type { ContextualMeasurement } from '../types/pollutant';
 
 interface AlertPanelProps {
   isOpen: boolean;
@@ -11,7 +12,7 @@ interface AlertPanelProps {
   selectedThreshold: string;
   onSelectThreshold: (category: string) => void;
   onSelectStation?: (stationId: number) => void;
-  onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
+  onOpenPollutantInfo?: (pollutantId: string, context?: ContextualMeasurement) => void;
   mode: 'live' | 'historical' | 'forecast';
   selectedDate: string;
   selectedModel: string;
@@ -42,6 +43,19 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
   const [activeTab, setActiveTab] = useState<'all' | 'observed' | 'forecast'>('all');
   const isHistorical = mode === 'historical';
 
+  // Handle Escape key to close the drawer
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onToggle();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, onToggle]);
+
   if (!isOpen) return null;
 
   const totalObserved = observedAlerts.length;
@@ -57,30 +71,39 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
       : [...observedAlerts, ...forecastAlerts];
 
   return (
-    <div className="alert-drawer-overlay">
-      <div className="alert-drawer-panel">
+    <div
+      className="alert-drawer-overlay"
+      onClick={onToggle}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Environmental Alerts Drawer"
+    >
+      <div className="alert-drawer-panel" onClick={(e) => e.stopPropagation()}>
         {/* Panel Header */}
         <div className="alert-panel-header">
           <div className="alert-panel-header-left">
             <div className="alert-badge-wrap">
-              <span className="alert-pulse-dot" />
-              <span className="alert-header-title">ENVIRONMENTAL ALERTS</span>
+              <span className="alert-pulse-dot" aria-hidden="true" />
+              <h2 className="alert-header-title">Environmental Alerts</h2>
             </div>
-            <span className="alert-count-chip">
-              {loading ? 'EVALUATING…' : `${activeCount} QUALIFYING EVENT${activeCount !== 1 ? 'S' : ''}`}
-            </span>
-            {summary && (
-              <span className="alert-high-severity-chip" title="Events at Very Poor or Severe (Tier 5+)">
-                {summary.observed.high_severity_count + summary.forecast.high_severity_count} CRITICAL
+            <div className="alert-header-chips">
+              <span className="alert-count-chip">
+                {loading ? 'Evaluating…' : `${activeCount} Event${activeCount !== 1 ? 's' : ''}`}
               </span>
-            )}
+              {summary && summary.observed.high_severity_count + summary.forecast.high_severity_count > 0 && (
+                <span className="alert-high-severity-chip" title="Events at Very Poor or Severe (Tier 5+)">
+                  {summary.observed.high_severity_count + summary.forecast.high_severity_count} Critical
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="alert-panel-header-right">
             {/* Threshold Configuration Selector */}
             <div className="threshold-selector-wrap">
-              <span className="threshold-label">Trigger Rule:</span>
+              <label htmlFor="alert-rule-select" className="threshold-label">Rule:</label>
               <select
+                id="alert-rule-select"
                 className="threshold-select"
                 value={selectedThreshold}
                 onChange={(e) => onSelectThreshold(e.target.value)}
@@ -94,17 +117,24 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
               </select>
             </div>
 
-            <button className="btn-close-alert-panel" onClick={onToggle} title="Close Alert Drawer">
+            <button
+              className="btn-close-alert-panel"
+              onClick={onToggle}
+              title="Close Alerts Drawer (Esc)"
+              aria-label="Close Alerts Drawer"
+            >
               ✕
             </button>
           </div>
         </div>
 
         {/* Tab Filters */}
-        <div className="alert-tabs-bar">
+        <div className="alert-tabs-bar" role="tablist">
           <button
             className={`alert-tab-btn ${activeTab === 'all' ? 'active' : ''}`}
             onClick={() => setActiveTab('all')}
+            role="tab"
+            aria-selected={activeTab === 'all'}
           >
             <span>All Alerts</span>
             <span className="tab-pill-count">{displayAlerts.length}</span>
@@ -112,13 +142,17 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
           <button
             className={`alert-tab-btn ${activeTab === 'observed' ? 'active' : ''}`}
             onClick={() => setActiveTab('observed')}
+            role="tab"
+            aria-selected={activeTab === 'observed'}
           >
-            <span>Observed Ground Telemetry</span>
+            <span>Observed Ground Data</span>
             <span className="tab-pill-count">{totalObserved}</span>
           </button>
           <button
             className={`alert-tab-btn ${activeTab === 'forecast' ? 'active' : ''}`}
             onClick={() => setActiveTab('forecast')}
+            role="tab"
+            aria-selected={activeTab === 'forecast'}
           >
             <span>5-Day ML Forecasts</span>
             <span className="tab-pill-count">{totalForecast}</span>
@@ -138,21 +172,22 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
           </div>
         )}
 
-        {/* Alerts List */}
+        {/* Alerts List Body */}
         <div className="alert-list-body">
           {loading ? (
             <div className="alert-loading-state">
-              <span>Evaluating environmental sensor streams against CPCB NAQI thresholds…</span>
+              <div className="pulse-indicator healthy" style={{ margin: '0 auto 12px auto' }} />
+              <span>Evaluating environmental sensor telemetry against CPCB NAQI thresholds…</span>
             </div>
           ) : displayAlerts.length === 0 ? (
             <div className="alert-empty-state">
-              <div className="empty-shield-icon">🛡</div>
-              <h4>No Environmental Alerts Triggered</h4>
+              <div className="empty-shield-icon" aria-hidden="true">🛡</div>
+              <h4>No Active Alerts Triggered</h4>
               <p>
-                No reporting stations meet or exceed the configured <strong>{selectedThreshold.toUpperCase()}</strong> threshold for the selected time horizon.
+                All reporting stations currently comply with the active <strong>{selectedThreshold.toUpperCase()}</strong> threshold rule for this time horizon.
               </p>
               <div className="empty-state-hint">
-                Threshold rules follow the Central Pollution Control Board (CPCB) NAQI standard. You can adjust the trigger sensitivity using the selector above.
+                Threshold criteria strictly adhere to the Central Pollution Control Board (CPCB) NAQI standard. You can adjust the sensitivity using the Rule selector above.
               </div>
             </div>
           ) : (
@@ -222,7 +257,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
                                 value: alert.pollutant.value,
                                 unit: alert.pollutant.unit,
                                 stationName: alert.station.name,
-                                dateOrTimestamp: alert.provenance.recorded_at || alert.provenance.target_date,
+                                dateOrTimestamp: (alert.provenance.recorded_at || alert.provenance.target_date) ?? undefined,
                                 source: alert.provenance.provider,
                                 dataType: alert.alert_type,
                                 severityCategory: alert.severity.category,
@@ -230,7 +265,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
                               });
                             }
                           }}
-                          title={`Click to inspect authoritative information for ${alert.pollutant.name}`}
+                          title={`Click to inspect authoritative definitions for ${alert.pollutant.name}`}
                         >
                           <span className="p-name">{alert.pollutant.name}</span>
                           <span className="p-val">
@@ -305,7 +340,7 @@ export const AlertPanel: React.FC<AlertPanelProps> = ({
         {/* Panel Footer */}
         <div className="alert-panel-footer">
           <span className="footer-rule-notice">
-            CPCB NAQI Standards · Model: <strong>{selectedModel}</strong> · Pure Observation/Forecast Separation
+            CPCB NAQI Standards · Model: <strong>{selectedModel}</strong> · Ground Telemetry &amp; 5-Day ML Predictions
           </span>
           <button className="btn-close-alert-footer" onClick={onToggle}>
             Done

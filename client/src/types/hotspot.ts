@@ -33,7 +33,7 @@ export interface Hotspot {
   };
   radius_meters: number;
   actual_cluster_radius_meters: number;
-  bounding_geojson?: any;
+  bounding_geojson?: Record<string, unknown> | null;
   station_count: number;
   avg_pm25: number;
   max_pm25: number;

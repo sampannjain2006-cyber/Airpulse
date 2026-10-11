@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import type { Station } from '../types/station';
-import type {
-  RecommendationResponse,
-} from '../types/recommendation';
+import type { RecommendationResponse } from '../types/recommendation';
 import { recommendationsApi } from '../api/recommendations';
 
 interface RecommendationModalProps {
@@ -42,6 +40,19 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
   useEffect(() => {
     if (pollutant) setSelectedMetric(pollutant);
   }, [pollutant]);
+
+  // Handle Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    if (isOpen) {
+      window.addEventListener('keydown', handleKeyDown);
+      return () => window.removeEventListener('keydown', handleKeyDown);
+    }
+  }, [isOpen, onClose]);
 
   // Fetch recommendations whenever modal opens or context changes
   useEffect(() => {
@@ -102,13 +113,19 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
   const context = data?.context;
 
   return (
-    <div className="rec-modal-overlay" onClick={onClose}>
+    <div
+      className="rec-modal-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Context-Aware Precaution Recommendations"
+    >
       <div className="rec-modal-panel" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className="rec-modal-header">
           <div className="rec-header-left">
             <div className="rec-badge-row">
-              <span className="rec-tag">FEATURE 10 · PUBLIC HEALTH GUIDANCE</span>
+              <span className="rec-tag">PUBLIC HEALTH GUIDANCE</span>
               <span
                 className={`rec-context-chip ${
                   isHistorical
@@ -129,15 +146,18 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
                   : '📡 OBSERVED GROUND DATA'}
               </span>
             </div>
-            <h3 className="rec-title">
-              Context-Aware Precaution Recommendations
-            </h3>
-            <span className="rec-subtitle">
+            <h2 className="rec-title">Context-Aware Precaution Recommendations</h2>
+            <p className="rec-subtitle">
               Verified exposure-reduction guidance based on CPCB NAQI (2014) &amp; WHO Global Guidelines (2021)
-            </span>
+            </p>
           </div>
 
-          <button className="btn-close-rec-modal" onClick={onClose} title="Close precautions modal">
+          <button
+            className="btn-close-rec-modal"
+            onClick={onClose}
+            title="Close precautions modal (Esc)"
+            aria-label="Close Precaution Recommendations"
+          >
             ✕
           </button>
         </div>
@@ -147,13 +167,14 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
           <div className="rec-context-item">
             <span className="rec-context-label">Location:</span>
             <strong className="rec-context-val">
-              {station ? `${station.name} (${station.city})` : 'Active Selection'}
+              {station ? `${station.name} (${station.city})` : 'Active Selection / Regional'}
             </strong>
           </div>
 
           <div className="rec-context-item">
-            <span className="rec-context-label">Evaluating Pollutant:</span>
+            <label htmlFor="rec-pollutant-dropdown" className="rec-context-label">Evaluating Pollutant:</label>
             <select
+              id="rec-pollutant-dropdown"
               className="rec-pollutant-select"
               value={selectedMetric}
               onChange={(e) => setSelectedMetric(e.target.value)}
@@ -217,7 +238,7 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
         )}
 
         {/* Target Audience Filters */}
-        <div className="rec-audience-tabs">
+        <div className="rec-audience-tabs" role="tablist">
           {[
             { id: 'all', label: 'All Audiences' },
             { id: 'general_public', label: 'General Public' },
@@ -228,6 +249,8 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
               key={tab.id}
               className={`rec-tab-btn ${selectedAudience === tab.id ? 'active' : ''}`}
               onClick={() => setSelectedAudience(tab.id)}
+              role="tab"
+              aria-selected={selectedAudience === tab.id}
             >
               {tab.label}
             </button>
@@ -238,24 +261,25 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
         <div className="rec-modal-body">
           {loading ? (
             <div className="rec-loading-state">
+              <div className="pulse-indicator healthy" style={{ margin: '0 auto 12px auto' }} />
               <span>Evaluating environmental severity against authoritative public health rules…</span>
             </div>
           ) : error ? (
             <div className="rec-error-state">
-              <span className="error-icon">⚠️</span>
+              <span className="error-icon" aria-hidden="true">⚠️</span>
               <h4>Unable to Retrieve Recommendations</h4>
               <p>{error}</p>
             </div>
           ) : data?.status === 'unavailable' || recommendations.length === 0 ? (
             <div className="rec-empty-state">
-              <div className="empty-shield-icon">🛡</div>
-              <h4>No Verified Precaution Recommendations Available</h4>
+              <div className="empty-shield-icon" aria-hidden="true">🛡</div>
+              <h4>No Active Precautions Required</h4>
               <p>
                 {data?.reason ||
-                  'No verified precaution recommendations are available for this selection. Environmental telemetry is either below triggering thresholds or currently unavailable.'}
+                  'Current air quality measurements are within acceptable thresholds for this pollutant and demographic group. No special protective measures are mandated.'}
               </p>
               <div className="rec-empty-hint">
-                Threshold criteria strictly adhere to Central Pollution Control Board (CPCB) NAQI and WHO Air Quality Guidelines.
+                Threshold criteria strictly adhere to Central Pollution Control Board (CPCB) NAQI guidelines and WHO Air Quality standards.
               </div>
             </div>
           ) : (
@@ -265,7 +289,7 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
                 return (
                   <div
                     key={rec.id}
-                    className={`rec-card ${isHighPriority ? 'high-priority' : ''}`}
+                    className={`rec-card priority-${rec.priority} ${isHighPriority ? 'high-priority' : ''}`}
                   >
                     {/* Card Top Row */}
                     <div className="rec-card-top">
@@ -318,7 +342,7 @@ export const RecommendationModal: React.FC<RecommendationModalProps> = ({
                     {/* Scope & Limitation Disclaimer */}
                     {rec.disclaimer && (
                       <div className="rec-disclaimer-box">
-                        <span className="disclaimer-icon">⚠️</span>
+                        <span className="disclaimer-icon" aria-hidden="true">⚠️</span>
                         <span>{rec.disclaimer}</span>
                       </div>
                     )}

@@ -48,35 +48,35 @@ export function PollutantChart({ data, series = ['pm25', 'pm10'], height = 280 }
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={chartData} margin={{ top: 8, right: 20, left: 0, bottom: 8 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8df" vertical={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
         <XAxis
           dataKey="t"
           tickFormatter={formatXTick}
-          tick={{ fill: '#4a5d4e', fontSize: 11, fontFamily: 'var(--font-sans)' }}
+          tick={{ fill: 'var(--color-text-secondary)', fontSize: 11, fontFamily: 'var(--font-sans)' }}
           tickLine={false}
-          axisLine={{ stroke: '#cbd5c5' }}
+          axisLine={{ stroke: 'var(--color-border-strong)' }}
           minTickGap={60}
         />
         <YAxis
-          tick={{ fill: '#4a5d4e', fontSize: 11, fontFamily: 'var(--font-sans)' }}
+          tick={{ fill: 'var(--color-text-secondary)', fontSize: 11, fontFamily: 'var(--font-sans)' }}
           tickLine={false}
-          axisLine={{ stroke: '#cbd5c5' }}
+          axisLine={{ stroke: 'var(--color-border-strong)' }}
           unit=" µg/m³"
         />
         <Tooltip
           contentStyle={{
-            backgroundColor: '#ffffff',
-            border: '1px solid #d1dcce',
+            backgroundColor: 'var(--color-bg-surface)',
+            border: '1px solid var(--color-border)',
             borderRadius: 10,
-            boxShadow: '0 6px 20px rgba(27, 67, 50, 0.12)',
-            color: '#19241b',
+            boxShadow: 'var(--shadow-md)',
+            color: 'var(--color-text-primary)',
             padding: '10px 14px',
           }}
-          labelStyle={{ color: '#2d6a4f', fontSize: 12, fontWeight: 600, marginBottom: 4 }}
-          labelFormatter={(label: any) => new Date(label).toLocaleString('en-IN')}
+          labelStyle={{ color: 'var(--color-forest)', fontSize: 12, fontWeight: 600, marginBottom: 4 }}
+          labelFormatter={(label: unknown) => (typeof label === 'string' || typeof label === 'number' ? new Date(label).toLocaleString('en-IN') : String(label))}
           itemStyle={{ fontSize: 12, padding: '2px 0' }}
         />
-        <Legend wrapperStyle={{ fontSize: 12, color: '#4a5d4e', paddingTop: 10 }} />
+        <Legend wrapperStyle={{ fontSize: 12, color: 'var(--color-text-secondary)', paddingTop: 10 }} />
         {series.includes('pm25') && (
           <Line
             type="monotone"

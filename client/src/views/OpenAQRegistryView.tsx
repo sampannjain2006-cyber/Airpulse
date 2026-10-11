@@ -46,8 +46,15 @@ export const OpenAQRegistryView: React.FC<OpenAQRegistryViewProps> = ({
       });
       setLocations(res.data || []);
       setTotalCount(res.total || 0);
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Failed to load OpenAQ registry locations');
+    } catch (err: unknown) {
+      let msg = 'Failed to load OpenAQ registry locations';
+      if (err && typeof err === 'object' && 'response' in err) {
+        const resp = (err as { response?: { data?: { error?: { message?: string } } } }).response;
+        if (resp?.data?.error?.message) msg = resp.data.error.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setError(msg);
       setLocations([]);
     } finally {
       setLoading(false);

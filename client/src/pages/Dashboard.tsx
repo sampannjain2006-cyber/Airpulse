@@ -144,7 +144,7 @@ export function Dashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleOpenPollutantInfo = useCallback((pollutantId: string, context?: ContextualMeasurement) => {
+  const handleOpenPollutantInfo = useCallback((pollutantId: string, context?: ContextualMeasurement | null) => {
     setSelectedPollutantId(pollutantId || 'pm25');
     setContextualMeasurement(context || null);
     setIsPollutantModalOpen(true);
@@ -335,7 +335,7 @@ export function Dashboard() {
       />
 
       {/* Row 3 Feature Action Bar / Quick Access Toolbar */}
-      <div className="dashboard-feature-status-bar" style={{ padding: '0.45rem 1.5rem', background: 'rgba(255,255,255,0.7)', borderBottom: '1px solid rgba(27,67,50,0.08)' }}>
+      <div className="dashboard-feature-status-bar">
         <div className="feature-status-inner" style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <button
             className="telemetry-status-pill waste-reuse-btn-pill"

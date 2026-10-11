@@ -99,11 +99,16 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
         setSnapshot(res);
         setSnapshotLoading(false);
       })
-      .catch((err: any) => {
-        console.warn('[ForecastsView] Snapshot error:', err.message);
-        setSnapshotError(
-          err.response?.data?.error?.message || err.message || 'Failed to load forecast snapshot.'
-        );
+      .catch((err: unknown) => {
+        let msg = 'Failed to load forecast snapshot.';
+        if (err && typeof err === 'object' && 'response' in err) {
+          const resp = (err as { response?: { data?: { error?: { message?: string } } } }).response;
+          if (resp?.data?.error?.message) msg = resp.data.error.message;
+        } else if (err instanceof Error) {
+          msg = err.message;
+        }
+        console.warn('[ForecastsView] Snapshot error:', msg);
+        setSnapshotError(msg);
         setSnapshotLoading(false);
       });
   }, [selectedDate, selectedModel]);
@@ -120,10 +125,15 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
         setForecast(res);
         setForecastLoading(false);
       })
-      .catch((err: any) => {
-        setForecastError(
-          err.response?.data?.error?.message || err.message || 'Failed to fetch station forecast.'
-        );
+      .catch((err: unknown) => {
+        let msg = 'Failed to fetch station forecast.';
+        if (err && typeof err === 'object' && 'response' in err) {
+          const resp = (err as { response?: { data?: { error?: { message?: string } } } }).response;
+          if (resp?.data?.error?.message) msg = resp.data.error.message;
+        } else if (err instanceof Error) {
+          msg = err.message;
+        }
+        setForecastError(msg);
         setForecast(null);
         setForecastLoading(false);
       });
@@ -405,21 +415,15 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
 
       {/* 4. Controls Bar: State, City, Search, Pollutant, Model Architecture */}
       <div className="forecast-controls-card">
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: '14px',
-          }}
-        >
+        <div className="forecast-filters-grid">
           {/* State Filter (All 28 States & 8 UTs) */}
-          <div className="nature-form-group">
-            <label htmlFor="forecast-state-filter" className="nature-form-label">
-              Administrative State / UT:
+          <div className="forecast-filter-group">
+            <label htmlFor="forecast-state-filter" className="forecast-filter-label">
+              Administrative State / UT
             </label>
             <select
               id="forecast-state-filter"
-              className="nature-select full-width"
+              className="forecast-filter-control"
               value={selectedState}
               onChange={(e) => {
                 setSelectedState(e.target.value);
@@ -439,13 +443,13 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
           </div>
 
           {/* Dependent City Filter */}
-          <div className="nature-form-group">
-            <label htmlFor="forecast-city-filter" className="nature-form-label">
-              Target City:
+          <div className="forecast-filter-group">
+            <label htmlFor="forecast-city-filter" className="forecast-filter-label">
+              Target City
             </label>
             <select
               id="forecast-city-filter"
-              className="nature-select full-width"
+              className="forecast-filter-control"
               value={selectedCity}
               onChange={(e) => setSelectedCity(e.target.value)}
               disabled={availableCities.length === 0}
@@ -464,28 +468,41 @@ export const ForecastsView: React.FC<ForecastsViewProps> = ({
           </div>
 
           {/* Search Box */}
-          <div className="nature-form-group">
-            <label htmlFor="forecast-search-input" className="nature-form-label">
-              Search Station or City:
+          <div className="forecast-filter-group">
+            <label htmlFor="forecast-search-input" className="forecast-filter-label">
+              Search Station or City
             </label>
-            <input
-              id="forecast-search-input"
-              type="text"
-              className="nature-input full-width"
-              placeholder="e.g. Anand Vihar, Mumbai, DPCC..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+            <div className="forecast-search-wrapper">
+              <span className="forecast-search-icon" aria-hidden="true">🔍</span>
+              <input
+                id="forecast-search-input"
+                type="text"
+                className="forecast-filter-control search-input"
+                placeholder="Search station, city, code..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className="forecast-search-clear-btn"
+                  onClick={() => setSearchQuery('')}
+                  aria-label="Clear search query"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Pollutant Selector */}
-          <div className="nature-form-group">
-            <label htmlFor="forecast-pollutant-dropdown" className="nature-form-label">
-              Forecast Pollutant:
+          <div className="forecast-filter-group">
+            <label htmlFor="forecast-pollutant-dropdown" className="forecast-filter-label">
+              Forecast Pollutant
             </label>
             <select
               id="forecast-pollutant-dropdown"
-              className="nature-select full-width"
+              className="forecast-filter-control"
               value={selectedPollutant}
               onChange={(e) => setSelectedPollutant(e.target.value)}
             >

@@ -6,14 +6,15 @@ import type {
 } from '../types/location';
 import { SeverityMeter } from './SeverityMeter';
 import { formatValue } from '../utils/aqiUtils';
+import type { ContextualMeasurement } from '../types/pollutant';
 
 interface LocationLookupModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelectStation?: (stationId: number) => void;
   initialQuery?: string;
-  onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
-  onOpenRecommendations?: (params: any) => void;
+  onOpenPollutantInfo?: (pollutantId: string, context?: ContextualMeasurement | null) => void;
+  onOpenRecommendations?: (params: Record<string, unknown>) => void;
 }
 
 const PRESET_LOCATIONS = [
@@ -66,8 +67,15 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
         freshness_hours: freshnessHours,
       });
       setResult(data);
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Failed to resolve location.');
+    } catch (err: unknown) {
+      let msg = 'Failed to resolve location.';
+      if (err && typeof err === 'object' && 'response' in err) {
+        const resp = (err as { response?: { data?: { error?: { message?: string } } } }).response;
+        if (resp?.data?.error?.message) msg = resp.data.error.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setError(msg);
       setResult(null);
     } finally {
       setLoading(false);
@@ -345,7 +353,7 @@ export const LocationLookupModal: React.FC<LocationLookupModalProps> = ({
                             value: val,
                             unit,
                             stationName: primary.station_info ? `${primary.station_info.name} (${result.location.canonical_name})` : result.location.canonical_name,
-                            dateOrTimestamp: primary.timestamp,
+                            dateOrTimestamp: primary.timestamp || undefined,
                             source: primary.provider,
                             dataType: primary.data_type,
                           });

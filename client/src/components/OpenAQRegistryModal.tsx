@@ -65,8 +65,15 @@ export const OpenAQRegistryModal: React.FC<Props> = ({ isOpen, onClose, onSelect
       });
       setNearbyResults(res.locations);
       setNearbyLoading(false);
-    } catch (err: any) {
-      setNearbyError(err.response?.data?.error?.message || err.message);
+    } catch (err: unknown) {
+      let msg = 'Failed to load locations';
+      if (err && typeof err === 'object' && 'response' in err) {
+        const resp = (err as { response?: { data?: { error?: { message?: string } } } }).response;
+        if (resp?.data?.error?.message) msg = resp.data.error.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setNearbyError(msg);
       setNearbyLoading(false);
     }
   };

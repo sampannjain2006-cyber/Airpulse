@@ -30,6 +30,14 @@ const SUPPORTED_POLLUTANTS = [
   { id: 'o3',   label: 'O₃',    unit: 'µg/m³' },
 ];
 
+const VALID_HORIZON_DATES = [
+  '2026-10-03',
+  '2026-10-04',
+  '2026-10-05',
+  '2026-10-06',
+  '2026-10-07',
+];
+
 export const ProtectionStoreModal: React.FC<ProtectionStoreModalProps> = ({
   isOpen,
   onClose,
@@ -49,6 +57,15 @@ export const ProtectionStoreModal: React.FC<ProtectionStoreModalProps> = ({
   const [selectedPollutant, setSelectedPollutant] = useState<string>(initialPollutant);
   const [overrideValue, setOverrideValue] = useState<number | null>(initialValue !== undefined ? initialValue : null);
   const [overrideTier, setOverrideTier] = useState<number | null>(initialSeverityTier !== undefined ? initialSeverityTier : null);
+  
+  // Forecast horizon date state with fallback to valid horizon date
+  const [targetDate, setTargetDate] = useState<string>(() => {
+    if (mode === 'forecast') {
+      return VALID_HORIZON_DATES.includes(selectedDate) ? selectedDate : VALID_HORIZON_DATES[0];
+    }
+    return selectedDate;
+  });
+
   const [data, setData] = useState<StoreRecommendationsResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,6 +87,19 @@ export const ProtectionStoreModal: React.FC<ProtectionStoreModalProps> = ({
     }
   }, [initialStation, initialPollutant, initialValue, initialSeverityTier]);
 
+  // Synchronize targetDate if external selectedDate or mode changes
+  useEffect(() => {
+    if (mode === 'forecast') {
+      if (VALID_HORIZON_DATES.includes(selectedDate)) {
+        setTargetDate(selectedDate);
+      } else {
+        setTargetDate(VALID_HORIZON_DATES[0]);
+      }
+    } else {
+      setTargetDate(selectedDate);
+    }
+  }, [selectedDate, mode]);
+
   // Load recommendations
   useEffect(() => {
     if (!isOpen) return;
@@ -88,7 +118,7 @@ export const ProtectionStoreModal: React.FC<ProtectionStoreModalProps> = ({
         value: overrideValue !== null ? overrideValue : undefined,
         severity_tier: overrideTier !== null ? overrideTier : undefined,
         mode,
-        date: selectedDate,
+        date: targetDate,
         model: selectedModel,
         data_type: dataType,
       })
@@ -113,7 +143,7 @@ export const ProtectionStoreModal: React.FC<ProtectionStoreModalProps> = ({
     overrideValue,
     overrideTier,
     mode,
-    selectedDate,
+    targetDate,
     selectedModel,
     dataType,
     stations,
@@ -204,12 +234,31 @@ export const ProtectionStoreModal: React.FC<ProtectionStoreModalProps> = ({
                   📍 {currentStation ? `${currentStation.city}, ${currentStation.state}` : 'Selected Destination'}
                 </span>
                 <span className="provenance-tag">
-                  {context?.data_provenance.label || 'GROUND OBSERVATION'}
+                  {context?.data_provenance?.label || 'GROUND OBSERVATION'}
                 </span>
                 <span className="mode-tag">
-                  {mode.toUpperCase()} MODE ({selectedDate})
+                  {mode.toUpperCase()} MODE ({targetDate})
                 </span>
               </div>
+
+              {mode === 'forecast' && (
+                <div className="forecast-date-selector-row">
+                  <label className="context-field-label">5-DAY FORECAST TARGET DATE:</label>
+                  <div className="horizon-date-buttons">
+                    {VALID_HORIZON_DATES.map((d, idx) => (
+                      <button
+                        key={d}
+                        type="button"
+                        className={`btn-horizon-date-pill ${targetDate === d ? 'active' : ''}`}
+                        onClick={() => setTargetDate(d)}
+                        title={`Select forecast target ${d}`}
+                      >
+                        Day {idx + 1} ({d.slice(5)})
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="context-right-col">
@@ -322,8 +371,44 @@ export const ProtectionStoreModal: React.FC<ProtectionStoreModalProps> = ({
           </div>
 
           {/* Loading / Error States */}
-          {loading && <div className="store-loading">Evaluating destination air quality and verified accessory listings…</div>}
-          {error && <div className="store-error">Error retrieving product catalog: {error}</div>}
+          {loading && (
+            <div className="store-loading-state">
+              <div className="store-spinner" />
+              <span>Evaluating destination air quality and verified accessory listings…</span>
+            </div>
+          )}
+
+          {error && (
+            <div className="store-error-card">
+              <div className="error-card-header">
+                <span className="error-card-icon">⚠️</span>
+                <div>
+                  <h4 className="error-card-title">Forecast Date &amp; Prediction Advisory</h4>
+                  <p className="error-card-msg">{error}</p>
+                </div>
+              </div>
+              <div className="error-card-actions">
+                <span className="error-action-hint">
+                  AirPulse forecasts strictly support the 5-day ML prediction horizon. Select a valid date below:
+                </span>
+                <div className="horizon-date-buttons">
+                  {VALID_HORIZON_DATES.map((d, idx) => (
+                    <button
+                      key={d}
+                      type="button"
+                      className={`btn-horizon-date-pill ${targetDate === d ? 'active' : ''}`}
+                      onClick={() => {
+                        setError(null);
+                        setTargetDate(d);
+                      }}
+                    >
+                      Day {idx + 1} ({d})
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Section 1: Pollution-Triggered Protective Equipment */}
           {!loading && !error && (

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Hotspot } from '../types/hotspot';
+import type { ContextualMeasurement } from '../types/pollutant';
 
 interface HotspotPanelProps {
   hotspots: Hotspot[];
@@ -12,8 +13,8 @@ interface HotspotPanelProps {
   selectedDate: string;
   selectedModel: string;
   loading?: boolean;
-  onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
-  onOpenRecommendations?: (params: any) => void;
+  onOpenPollutantInfo?: (pollutantId: string, context?: ContextualMeasurement | null) => void;
+  onOpenRecommendations?: (params: Record<string, unknown>) => void;
 }
 
 export const HotspotPanel: React.FC<HotspotPanelProps> = ({

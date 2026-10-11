@@ -69,13 +69,13 @@ export function MapView({
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
 
-    // Use imported Leaflet instance or global fallback
-    const leaflet = L || (window as any).L;
+    const leaflet = L;
     if (!leaflet) return;
 
     // React StrictMode safety check: reset ID if container was previously mounted
-    if ((mapContainerRef.current as any)._leaflet_id) {
-      (mapContainerRef.current as any)._leaflet_id = null;
+    const container = mapContainerRef.current;
+    if (container && '_leaflet_id' in container) {
+      delete (container as unknown as Record<string, unknown>)._leaflet_id;
     }
 
     const map = leaflet.map(mapContainerRef.current, {
@@ -118,8 +118,8 @@ export function MapView({
         mapRef.current.remove();
         mapRef.current = null;
       }
-      if (mapContainerRef.current) {
-        (mapContainerRef.current as any)._leaflet_id = null;
+      if (container && '_leaflet_id' in container) {
+        delete (container as unknown as Record<string, unknown>)._leaflet_id;
       }
     };
   }, []);
@@ -127,7 +127,7 @@ export function MapView({
   // 2. Render Station Markers
   useEffect(() => {
     const map = mapRef.current;
-    const leaflet = L || (window as any).L;
+    const leaflet = L;
     if (!map || !leaflet) return;
 
     // Remove existing markers
@@ -354,7 +354,7 @@ export function MapView({
   // 3. Render Hotspot Spatial Clusters Layer
   useEffect(() => {
     const map = mapRef.current;
-    const leaflet = L || (window as any).L;
+    const leaflet = L;
     if (!map || !leaflet) return;
 
     if (hotspotsLayerRef.current) {
@@ -470,7 +470,7 @@ export function MapView({
   // 6. Render Pollution-Aware Route Layers (Feature 13)
   useEffect(() => {
     const map = mapRef.current;
-    const leaflet = L || (window as any).L;
+    const leaflet = L;
     if (!map || !leaflet) return;
 
     if (!routesLayerRef.current) {
@@ -519,7 +519,7 @@ export function MapView({
         .bindPopup(`<b>Destination (B):</b> ${routeDestination.name}`);
     }
 
-    let selectedPolyline: any = null;
+    let selectedPolyline: L.Polyline | null = null;
 
     // Draw Route Polylines
     routes.forEach((route, idx) => {
@@ -566,7 +566,7 @@ export function MapView({
 
     // Zoom and pan to fit the route
     if (selectedPolyline) {
-      map.fitBounds(selectedPolyline.getBounds(), { padding: [50, 50], animate: true });
+      map.fitBounds((selectedPolyline as L.Polyline).getBounds(), { padding: [50, 50], animate: true });
     }
   }, [routes, selectedRouteIndex, onSelectRouteIndex, routeOrigin, routeDestination]);
   const computedHeight = height

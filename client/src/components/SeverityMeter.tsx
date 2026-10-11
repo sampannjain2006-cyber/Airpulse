@@ -1,6 +1,7 @@
 import React from 'react';
 import { getSeverity, CPCB_CATEGORIES, RULE_SOURCE } from '../utils/severityEngine';
 import type { SeverityResult } from '../types/severity';
+import type { ContextualMeasurement } from '../types/pollutant';
 
 interface SeverityMeterProps {
   metric?: string;
@@ -13,7 +14,7 @@ interface SeverityMeterProps {
   recordedAt?: string;
   compact?: boolean;
   className?: string;
-  onOpenPollutantInfo?: (pollutantId: string, context?: any) => void;
+  onOpenPollutantInfo?: (pollutantId: string, context?: ContextualMeasurement | null) => void;
 }
 
 export const SeverityMeter: React.FC<SeverityMeterProps> = ({
@@ -102,7 +103,7 @@ export const SeverityMeter: React.FC<SeverityMeterProps> = ({
                   metric,
                   pollutantName: result.metric_display,
                   value: result.value,
-                  unit: result.unit,
+                  unit: result.unit || 'µg/m³',
                   source: isForecast ? `AIRPULSE ML (${modelName || 'Ensemble'})` : isModelled ? 'Google Air Quality API' : source,
                   dataType: isForecast ? 'predicted' : isModelled ? 'modelled' : 'observed',
                   dateOrTimestamp: targetDate || recordedAt,

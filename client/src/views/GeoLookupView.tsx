@@ -8,7 +8,7 @@ import type { ContextualMeasurement } from '../types/pollutant';
 interface GeoLookupViewProps {
   onSelectStation?: (stationId: number) => void;
   onNavigateToLive?: () => void;
-  onOpenPollutantInfo?: (pollutantId: string, context?: ContextualMeasurement) => void;
+  onOpenPollutantInfo?: (pollutantId: string, context?: ContextualMeasurement | null) => void;
 }
 
 export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
@@ -116,8 +116,15 @@ export const GeoLookupView: React.FC<GeoLookupViewProps> = ({
     try {
       const data = await locationApi.lookup(params);
       setResult(data);
-    } catch (err: any) {
-      setError(err.response?.data?.error?.message || err.message || 'Spatial lookup failed.');
+    } catch (err: unknown) {
+      let msg = 'Spatial lookup failed.';
+      if (err && typeof err === 'object' && 'response' in err) {
+        const resp = (err as { response?: { data?: { error?: { message?: string } } } }).response;
+        if (resp?.data?.error?.message) msg = resp.data.error.message;
+      } else if (err instanceof Error) {
+        msg = err.message;
+      }
+      setError(msg);
       setResult(null);
     } finally {
       setLoading(false);
